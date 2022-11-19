@@ -30,6 +30,6 @@ print(ROE())
 print(PBV())
 
 import matplotlib.pyplot as plt 
-plt.plot(ROE() , PBV())
+plt.scatter(ROE() , PBV())
 plt.show()
 
