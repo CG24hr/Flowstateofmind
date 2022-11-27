@@ -1,17 +1,3 @@
-# สร้าง class เป็น boardgame 
-# โดยผู้เล่นแต่ละคนในเกมเป็น object มี Attribute คือชื่อและตำแหน่ง , Method ได้แก่ walk, snake, ladder
-# snake
-    # ช่อง 35 ไป 6
-    # ช่อง 61 ไป 43
-    # ช่อง 89 ไป 46
-    # ช่อง 97 ไป 60
-# ladder
-    # ช่อง 8 ไป 32
-    # ช่อง 17 ไป 23
-    # ช่อง 39 ไป 58
-    # ช่อง 44 ไป 76
-    # ช่อง 65 ไป 86
-
 class SnakeAndLadder :
     def __init__(self, name) :
         self.name = name
@@ -67,7 +53,6 @@ class SnakeAndLadder :
         print(self.player , 'is standing on', self.climb)
         self.End = input('Would you like to end your turn ? <Press Enter to continue.>')
         return self.climb
-
 
 
 #เรียกใช้ Class
