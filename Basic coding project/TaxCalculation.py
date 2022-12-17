@@ -5,6 +5,7 @@ class personal_incomeTax  :
     def __init__ (self,income) :
         self.income = income
     # หักค่าใช้จ่าย แบบเหมา 50% แต่ไม่เกิน 100000
+
     def expenses(self) :
         if self.income * 0.5 > 100000 :
             self.expenses = 100000    
@@ -237,11 +238,11 @@ employee.interest()
 employee.politicalparty()
 employee.socialdonate()
 employee.generaldonate()
-
-
-
+# ได้ เงินได้สุทธิ หลังหักค่าใช้จ่ายและค่ารถหย่อนทั้งหมดมาคำนวณภาษีตามขั้นบันได
 employee.ladder()
 employee.showdata()
+
+
 
 
 
