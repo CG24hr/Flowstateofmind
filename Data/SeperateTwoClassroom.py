@@ -1,4 +1,4 @@
-# ID, Mr/Ms, Name, Score<0-100> : n = 300
+# ID, Mr/Ms, Score<0-100> : n = 300
 # use DataFrame for data manipulating
 # group sampling for equality of score 
 

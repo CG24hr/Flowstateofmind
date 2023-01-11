@@ -10,21 +10,23 @@
 
 class pairedTtest :
     def __init__(self,pretest, posttest) : 
-        import scipy.stats 
+        from scipy.stats import kstest, shapiro, ttest_rel
         self.pretest = pretest
         self.posttest = posttest
-        self.SciPy = scipy.stats
+        self.kstest = kstest
+        self.shapiro = shapiro
+        self.pairedttest = ttest_rel
 
     def distribution(self) :
-        self.statistic, self.pvalue = self.SciPy.shapiro(self.posttest)
+        self.statistic, self.pvalue = self.shapiro(self.posttest)
         print('Shapiro-Wilk : test statistic = {}, p-value = {}'.format(self.statistic, self.pvalue))
 
     def hypothesis(self) : 
         # Perform paired t-test
         if self.pvalue > 0.05 :
-            t_statistic, t_pvalue = self.SciPy.ttest_rel(self.pretest, self.posttest)
+            t_statistic, t_pvalue = self.pairedttest(self.pretest, self.posttest)
             # Print results
-            print('student paired t-test : test statistic = {}, p-value = {}'.format(t_statistic, t_pvalue))
+            print('student paired t-test : test statistic = {}, p-value = {}'.format(float(t_statistic), float(t_pvalue)))
         else : 
             print('The assumption test was failed. Please use others statistical method.')
 
@@ -59,6 +61,6 @@ plt.ylabel('Number of participants')
 plt.show()
 
 # call class & function 
-research = pairedTtest(dfPre, dfPost)
+research = pairedTtest(dfPre['pre-exercise SBP'], dfPost['post-exercise SBP'])
 research.distribution()
 research.hypothesis()
