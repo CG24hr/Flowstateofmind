@@ -43,12 +43,12 @@ covid_Europe = covid[covid['continent'] == 'Europe']
 covid_Europe = covid_Europe.loc[:, ['location', 'date', 'population', 'gdp_per_capita', 'new_deaths_per_million', 'weekly_icu_admissions_per_million', 'new_vaccinations_smoothed_per_million']]
 covid_Europe = covid_Europe.rename(columns = {'new_vaccinations_smoothed_per_million' : 'new_vaccinations_per_million'})
 covid_Europe = covid_Europe[covid_Europe['date'] >= '2021-06-01']
-
+print(covid_Europe)
 
 
 covid_Europe['total_vaccinations_per_million'] = covid_Europe.groupby('location')['new_vaccinations_per_million'].cumsum()
 covid_Europe = covid_Europe.set_index('location')
-
+print(covid_Europe)
 
 covid_Europe.plot(x = 'total_vaccinations_per_million', y = 'new_deaths_per_million', kind = 'scatter', alpha = 0.25, s = covid_Europe['population'] / 10**6, c = 'navy')
 plt.title('Correlation between Covid-19 vaccination rate and deaths rate in Europe since June 2021')

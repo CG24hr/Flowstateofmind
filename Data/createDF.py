@@ -43,10 +43,10 @@ class study :
         npv = table.iloc[1, 1] / (table.iloc[1, 0] + table.iloc[1, 1])
         sensitivity = table.iloc[0, 0] / (table.iloc[0, 0] + table.iloc[1, 0])
         specificity = table.iloc[1, 1] / (table.iloc[1, 1] + table.iloc[0, 1])
-        print(ppv)
-        print(npv)
-        print(sensitivity)
-        print(specificity)
+        print('ppv = ', ppv)
+        print('npv = ', npv)
+        print('sensitivity = ', sensitivity)
+        print('specificity = ', specificity)
 
 
 Screening = study()

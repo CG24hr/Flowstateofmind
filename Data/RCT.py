@@ -86,140 +86,195 @@ for i in range(ss):
 ID_np = np.array(ID)
 
 # Quantitative (ordinal/nominal) : random.randint, Quantitative (interval/ratio) : random.normal
-age_Con = np.round(np.random.normal(50, 2, ss)).astype(int)
-age_Int = np.round(np.random.normal(50, 2, ss)).astype(int)
-
-onset_Con = np.round(np.random.normal(12,2, ss)).astype(int)
-onset_Int = np.round(np.random.normal(12,2, ss)).astype(int)
+age = np.round(np.random.normal(50, 2, ss)).astype(int)
+onset= np.round(np.random.normal(12,2, ss)).astype(int)
+vol = np.random.normal(15,2, ss)
 
 
-vol_Con = np.random.normal(15,2, ss)
-vol_Int = np.random.normal(15,2, ss)
+ProfileData = {'Patients ID':ID_np , 'Age':age, 'Onset':onset, 'Vol(cm3)':vol}
+dfProfile = pd.DataFrame(ProfileData)
+dfProfile = dfProfile.set_index('Patients ID')
+
+dfProfile['group'] = np.random.choice(['control', 'intervention'], size = ss, p = [0.5, 0.5])
+print(dfProfile)
+dfProfile_con = dfProfile[dfProfile['group'] == 'control']
+dfProfile_int = dfProfile[dfProfile['group'] == 'intervention']
+print('Baseline characteristics of control group : ')
+print(dfProfile_con)
+print(dfProfile_con.describe())
+print('Baseline characteristics of intervention group : ')
+print(dfProfile_int)
+print(dfProfile_int.describe())
+
+
+
 
 # baseline clinical score
 
-MAS_preControl = np.random.choice([0,1,2,3,4,5], ss, p = [0.1,0.1,0.1,0.3,0.4,0.0])
-MAS_postControl = np.random.choice([0,1,2,3,4,5], ss, p = [0.2,0.3,0.3,0.1,0.1,0.0])
-MAS_preInt = np.random.choice([0,1,2,3,4,5], ss, p = [0.1,0.1,0.1,0.3,0.4,0.0])
-MAS_postInt = np.random.choice([0,1,2,3,4,5], ss, p = [0.2,0.3,0.3,0.2,0.0,0.0])
+MAS_preControl = np.random.choice([0,1,2,3,4,5], len(dfProfile_con.index), p = [0.1,0.1,0.1,0.3,0.4,0.0])
+MAS_postControl = np.random.choice([0,1,2,3,4,5], len(dfProfile_con.index), p = [0.2,0.3,0.3,0.1,0.1,0.0])
+MAS_preInt = np.random.choice([0,1,2,3,4,5], len(dfProfile_int.index), p = [0.1,0.1,0.1,0.3,0.4,0.0])
+MAS_postInt = np.random.choice([0,1,2,3,4,5], len(dfProfile_int.index), p = [0.2,0.3,0.3,0.2,0.0,0.0])
 
-BS_preControl = np.random.choice([1,2,3,4,5,6], ss, p = [0.2,0.3,0.2,0.1,0.1,0.1])
-BS_postControl = np.random.choice([1,2,3,4,5,6], ss, p = [0.0,0.2,0.2,0.2,0.2,0.2])
-BS_preInt = np.random.choice([1,2,3,4,5,6], ss, p = [0.2,0.3,0.2,0.1,0.1,0.1])
-BS_postInt = np.random.choice([1,2,3,4,5,6], ss, p = [0.0,0.0,0.2,0.2,0.3,0.3])
-
-ProfileData = {'Patients ID':ID_np , 'Age Control':age_Con, 'Age Intervention':age_Int, 'Onset Control':onset_Con, 'Onset Intervention':onset_Int,
-               'Vol(cm3) Control':vol_Con, 'Vol(cm3) Intervention':vol_Int}
-
-dfProfile = pd.DataFrame(ProfileData)
-dfProfile = dfProfile.set_index('Patients ID')
-print(dfProfile)
-print(dfProfile.describe())
-
-ClinicalData = {'Patients ID':ID_np, 'MAS pre-control':MAS_preControl, 'MAS post-control':MAS_postControl,
-                'MAS pre-intervention':MAS_preInt, 'MAS post-intervention':MAS_postInt,
-                'BS pre-control':BS_preControl, 'BS post-control':BS_postControl,
-                'BS pre-intervention':BS_preInt, 'BS post_intervention':BS_postInt}
-
-dfClinical = pd.DataFrame(ClinicalData)
-dfClinical = dfClinical.set_index('Patients ID')
-print(dfClinical)
-print(dfClinical.describe())
+BS_preControl = np.random.choice([1,2,3,4,5,6], len(dfProfile_con.index), p = [0.2,0.3,0.2,0.1,0.1,0.1])
+BS_postControl = np.random.choice([1,2,3,4,5,6], len(dfProfile_con.index), p = [0.0,0.2,0.2,0.2,0.2,0.2])
+BS_preInt = np.random.choice([1,2,3,4,5,6], len(dfProfile_int.index), p = [0.2,0.3,0.2,0.1,0.1,0.1])
+BS_postInt = np.random.choice([1,2,3,4,5,6], len(dfProfile_int.index), p = [0.0,0.0,0.2,0.2,0.3,0.3])
 
 
+dfProfile_con['MAS_pre'] = MAS_preControl
+dfProfile_con['MAS_post'] = MAS_postControl
+dfProfile_con['BS_pre'] = BS_preControl
+dfProfile_con['BS_post'] = BS_postControl
+
+dfProfile_int['MAS_pre'] = MAS_preInt
+dfProfile_int['MAS_post'] = MAS_postInt
+dfProfile_int['BS_pre'] = BS_preInt
+dfProfile_int['BS_post'] = BS_postInt
+
+print('Baseline Clinical data of control group : ')
+print(dfProfile_con)
+print('Baseline Clinical data of intervention group : ')
+print(dfProfile_int)
+
+
+# test difference between baseline characteristics between control and intervention group (Age, Onset, Vol(cm3)) + MAS & BS before treatment
+# test for normality distribution 
+study = RCT()
+
+study.distribution(dfProfile_con['Age'], dfProfile_int['Age'])
+pvalue_age = study.interdiff()
+if pvalue_age >= 0.05 : 
+    print('There is not significant difference between age of two comparison groups')
+elif pvalue_age < 0.05 :
+    print('There is significant difference between age of two comparison groups')
+print('p-value = ', round(pvalue_age, 2))
+
+study.distribution(dfProfile_con['Onset'], dfProfile_int['Onset'])
+pvalue_onset = study.interdiff()
+if pvalue_onset >= 0.05 : 
+    print('There is not significant difference between onset of two comparison groups')
+elif pvalue_onset < 0.05 :
+    print('There is significant difference between onset of two comparison groups')
+print('p-value = ', round(pvalue_onset, 2))
+
+study.distribution(dfProfile_con['Vol(cm3)'], dfProfile_int['Vol(cm3)'])
+pvalue_vol = study.interdiff()
+if pvalue_vol >= 0.05 : 
+    print('There is not significant difference between Vol(cm3) of two comparison groups')
+elif pvalue_vol < 0.05 :
+    print('There is significant difference between Vol(cm3) of two comparison groups')
+print('p-value = ', round(pvalue_vol, 2))
+
+study.distribution(dfProfile_con['MAS_pre'], dfProfile_int['MAS_pre'])
+pvalue_MAS = study.interdiff()
+if pvalue_MAS >= 0.05 : 
+    print('There is not significant difference between MAS before treatment of two comparison groups')
+elif pvalue_MAS < 0.05 :
+    print('There is significant difference between MAS before treatment of two comparison groups')
+print('p-value = ', round(pvalue_MAS, 2))
+
+study.distribution(dfProfile_con['BS_pre'], dfProfile_int['BS_pre'])
+pvalue_BS = study.interdiff()
+if pvalue_BS >= 0.05 : 
+    print('There is not significant difference between BS before treatment of two comparison groups')
+elif pvalue_BS < 0.05 :
+    print('There is significant difference between BS before treatment of two comparison groups')
+print('p-value = ', round(pvalue_BS, 2))
 
 
 
+# histogram
+# normality test for dependent variables
+# dependent variables = difference
+diff_MAS_con = dfProfile_con['MAS_post'] -dfProfile_con['MAS_pre']
+diff_BS_con = dfProfile_con['BS_post'] - dfProfile_con['BS_pre']
 
-# profile comparison
-# compare ages between group
-research.distribution(dfProfile['Age Control'], dfProfile['Age Intervention'])
-pvalue = research.interdiff()
-if pvalue >= 0.05 : 
-    print('The difference in age between the two groups is not statistically significant, p-value{}'.format(pvalue))
-else :
-    print('The difference in age between the two groups is statistically significant, p-value{}'.format(pvalue))
-#compare onset between group
-research.distribution(dfProfile['Onset Control'], dfProfile['Onset Intervention'])
-pvalue = research.interdiff()
-if pvalue >= 0.05 : 
-    print('The difference in onset between the two groups is not statistically significant, p-value {}'.format(pvalue))
-else :
-    print('The difference in onset between the two groups is statistically significant, p-value {}'.format(pvalue))
-#compare volume between group
-research.distribution(dfProfile['Vol(cm3) Control'], dfProfile['Vol(cm3) Intervention'])
-pvalue = research.interdiff()
-if pvalue >= 0.05 :
-    print('The difference in lesion volume between the two groups is not statistically significant, p-value {}'.format(pvalue))
-else :
-    print('The difference in lesion volume between the two groups is statistically significant, p-value {}'.format(pvalue))
-
-# clinical baseline comparison
-# MAS
-research.distribution(dfClinical['MAS pre-control'], dfClinical['MAS pre-intervention'])
-pvalue = research.interdiff()
-if pvalue >= 0.05 : 
-    print('The difference in MAS baseline between the two groups is not statistically significant, p-value{}'.format(pvalue))
-else :
-    print('The difference in MAS baseline between the two groups is statistically significant, p-value{}'.format(pvalue))
-
-#BS
-research.distribution(dfClinical['BS pre-control'], dfClinical['BS pre-intervention'])
-pvalue = research.interdiff()
-if pvalue >= 0.05 : 
-    print('The difference in BS baseline between the two groups is not statistically significant, p-value{}'.format(pvalue))
-else :
-    print('The difference in BS baseline between the two groups is statistically significant, p-value{}'.format(pvalue))
+diff_MAS_int = dfProfile_int['MAS_post'] - dfProfile_int['MAS_pre']
+diff_BS_int = dfProfile_int['BS_post'] - dfProfile_int['BS_pre']
 
 
-# Intragroup comparison 
 
-# MAS : conventional therapy 
-research.distribution(dfClinical['MAS pre-control'], dfClinical['MAS post-control'])
-pvalue = research.intradiff()
-if pvalue < 0.05 : 
-    print('The MAS score of control group showed significant improvement after receiving conventional therapy, p-value {}'.format(pvalue))
-else : 
-    print('The MAS score of control group showed no significant improvement after receiving conventional therapy, p-value {}'.format(pvalue))
+print()
+print()
+# หาความแตกแต่างภายในกลุ่ม ก่อน-หลังได้รับการรักษา
+study.distribution(dfProfile_con['MAS_pre'], dfProfile_con['MAS_post'])
+pvalue_MAS_con = study.intradiff()
+if pvalue_MAS_con >= 0.05 : 
+    print('There is not significant difference of MAS score after treatment in control group')
+elif pvalue_MAS_con < 0.05 :
+    print('There is significant difference of MAS score after treatment in control group')
+print('p-value = ', round(pvalue_MAS_con, 2))
 
-# MAS : interventional therapy
-research.distribution(dfClinical['MAS pre-intervention'], dfClinical['MAS post-intervention'])
-pvalue = research.intradiff()
-if pvalue < 0.05 : 
-    print('The MAS score of intervention group showed significant improvement after receiving interventional therapy, p-value {}'.format(pvalue))
-else : 
-    print('The MAS score of intervention group showed no significant improvement after receiving interventional therapy, p-value {}'.format(pvalue))
+study.distribution(dfProfile_con['BS_pre'], dfProfile_con['BS_post'])
+pvalue_BS_con = study.intradiff()
+if pvalue_BS_con >= 0.05 : 
+    print('There is not significant difference of BS score after treatment in control group')
+elif pvalue_BS_con < 0.05 :
+    print('There is significant difference of BS score after treatment in control group')
+print('p-value = ', round(pvalue_BS_con, 2))
 
-# BS : conventional therapy 
-research.distribution(dfClinical['BS pre-control'], dfClinical['BS post-control'])
-pvalue = research.intradiff()
-if pvalue < 0.05 : 
-    print('The BS score of control group showed significant improvement after receiving conventional therapy, p-value {}'.format(pvalue))
-else : 
-    print('The BS score of control group showed no significant improvement after receiving conventional therapy, p-value {}'.format(pvalue))
 
-# BS : interventional therapy 
-research.distribution(dfClinical['BS pre-intervention'], dfClinical['BS post_intervention'])
-pvalue = research.intradiff()
-if pvalue < 0.05 : 
-    print('The BS score of interventional group showed significant improvement after receiving interventional therapy, p-value {}'.format(pvalue))
-else : 
-    print('The BS score of interventional group showed no significant improvement after receiving interventional therapy, p-value {}'.format(pvalue))
+study.distribution(dfProfile_int['MAS_pre'], dfProfile_int['MAS_post'])
+pvalue_MAS_int = study.intradiff()
+if pvalue_MAS_int >= 0.05 : 
+    print('There is not significant difference of MAS score after treatment in intervention group')
+elif pvalue_MAS_int < 0.05 :
+    print('There is significant difference of MAS score after treatment in intervention group')
+print('p-value = ', round(pvalue_MAS_int, 2))
 
-# Intergroup comparison for efficacy
 
-# MAS
-research.distribution(dfClinical['MAS post-control'], dfClinical['MAS post-intervention'])
-pvalue = research.interdiff() 
-if pvalue < 0.05 : 
-    print('The MAS score of interventional group showed significant improvement compared with conventional therapy, p-value {}'.format(pvalue))
-else :
-    print('The MAS score of interventional group showed no significant improvement compared with conventional therapy, p-value {}'.format(pvalue))
+study.distribution(dfProfile_int['BS_pre'], dfProfile_int['BS_post'])
+pvalue_BS_int = study.intradiff()
+if pvalue_BS_int >= 0.05 : 
+    print('There is not significant difference of BS score after treatment in intervention group')
+elif pvalue_BS_int < 0.05 :
+    print('There is significant difference of BS score after treatment in intervention group')
+print('p-value = ', round(pvalue_BS_int, 2))
 
-#BS 
-research.distribution(dfClinical['BS post-control'], dfClinical['BS post_intervention'])
-pvalue = research.interdiff()
-if pvalue < 0.05 : 
-    print('The BS score of interventional group showed significant improvement compared with conventional therapy, p-value {}'.format(pvalue))
-else :
-    print('The BS score of interventional group showed no significant improvement compared with conventional therapy, p-value {}'.format(pvalue))
+
+print()
+print()
+# เทียบ MAS, BS ระหว่างสองกลุ่ม ** อันนี้ต้องเอา ผลต่างมาเทียบกัน
+study.distribution(diff_MAS_con, diff_MAS_int)
+pvalue_MAS = study.interdiff()
+if pvalue_MAS >= 0.05 : 
+    print('There is not significant difference of MAS score between control and intervention group')
+elif pvalue_MAS < 0.05 :
+    print('There is significant difference of MAS score between control and intervention group')
+print('Mean difference of MAS between two comparison groups', np.mean(diff_MAS_int) - np.mean(diff_MAS_con))
+print('p-value = ', round(pvalue_MAS, 2))
+
+study.distribution(diff_BS_con, diff_BS_int)
+pvalue_BS = study.interdiff()
+if pvalue_BS >= 0.05 : 
+    print('There is not significant difference of BS score between control and intervention group')
+elif pvalue_BS < 0.05 :
+    print('There is significant difference of BS score between control and intervention group')
+print('Mean difference of BS between two comparison groups', np.mean(diff_BS_int) - np.mean(diff_BS_con))
+print('p-value = ', round(pvalue_BS, 2))
+
+
+diff_MAS_con.hist(bins = 8, alpha = 0.5, label = 'Control group')
+diff_MAS_int.hist(bins = 8, alpha = 0.5, label = 'Experimental group')
+mean_diff_con_MAS = diff_BS_con.mean()
+mean_diff_exp_MAS = diff_BS_int.mean()
+plt.title('Distribution of MAS difference between in both groups.')
+plt.xlabel('MAS difference between pre-intervention and post-intervention')
+plt.axvline(mean_diff_con_MAS, color = 'navy', linestyle = 'dashed', linewidth = 1, label = 'mean difference of control group')
+plt.axvline(mean_diff_exp_MAS, color = 'red', linestyle = 'dashed', linewidth = 1, label = 'mean difference of experimental group')
+plt.legend()
+plt.show()
+
+
+diff_BS_con.hist(bins = 8, alpha = 0.5, label = 'Control group')
+diff_BS_int.hist(bins = 8, alpha = 0.5, label = 'Experimental group')
+mean_diff_con_BS = diff_BS_con.mean()
+mean_diff_exp_BS = diff_BS_int.mean()
+plt.title('Distribution of BS difference between in both groups.')
+plt.xlabel('BS difference between pre-intervention and post-intervention')
+plt.axvline(mean_diff_con_BS, color = 'navy', linestyle = 'dashed', linewidth = 1, label = 'mean difference of control group')
+plt.axvline(mean_diff_exp_BS, color = 'red', linestyle = 'dashed', linewidth = 1, label = 'mean difference of experimental group')
+plt.legend()
+plt.show()
+
