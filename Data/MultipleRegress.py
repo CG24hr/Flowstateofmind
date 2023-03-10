@@ -39,7 +39,5 @@ model = sm.Logit(Y, X)
 result = model.fit()
 result = result.summary2()
 print(result)
-# ส่วนการคิด Odd ratios คือการเอา coefficient มา exponentiate -> np.exp(coef.)
-conf = result.conf_int()
-
-print(conf)
+print(result.tables[1])
+# ส่วนการคิด Odd ratios คือการเอา coefficient มา exponentiate -> np.exp(coef.) + ** อย่าลืมเอา upper & lower limit ของ 95% CI มา exponentiate ด้วย เพราะนั่นคือค่าของ coefficient ยังไม่ใช่ของ Odd ratios 
