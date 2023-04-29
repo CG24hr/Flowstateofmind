@@ -41,3 +41,5 @@ result = result.summary2()
 print(result)
 print(result.tables[1])
 # ส่วนการคิด Odd ratios คือการเอา coefficient มา exponentiate -> np.exp(coef.) + ** อย่าลืมเอา upper & lower limit ของ 95% CI มา exponentiate ด้วย เพราะนั่นคือค่าของ coefficient ยังไม่ใช่ของ Odd ratios 
+
+

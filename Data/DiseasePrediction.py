@@ -5,6 +5,8 @@ import seaborn as sns
 import scipy.stats as stat
 import statsmodels.api as sm
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 import math
 
 Disease = pd.read_csv('D:\\Users\\Desktop\\Python code\\GitHub\\Flowstateofmind\\Data\\csv\\diseasePrediction.csv')
@@ -109,14 +111,22 @@ print(result)
 # scikitlearn for prediction
 X = Disease[['A', 'B', 'C', 'D', 'E', 'F']]
 Y = Disease['Disease']
-model = LogisticRegression()
-model.fit(X, Y)
+X_train, X_test, Y_train, Y_test = train_test_split(X.values, Y.values, test_size=0.2, random_state=123) 
+    # test_size = 0.2 หมายถึง random แบ่งข้อมูล 20 % ออกเป็น test set (X_test, Y_test) ให้ model ไม่เคยเห็นมาก่อน แล้วที่เหลือจะเป็น train set(X_train, Y_train) เพื่อไปเข้า model.fit()
+model = LogisticRegression() # ถ้าผลลัพธ์มีมากกว่า binary variables ให้ใช้ decision tree
+model.fit(X_train, Y_train)
 
 input = np.array([140, 75, 96, 0, 40, 0.65])
 new_X = pd.DataFrame([input], columns=['A', 'B', 'C', 'D', 'E', 'F'])
-predict_Y = model.predict(new_X)
-print('If each serum marker levels are ', input, ',respectively.')
-print('Outcome will be : ', predict_Y, '(Disease)')
+new_X = new_X.values.reshape(1, -1)
+Y_predict_test = model.predict(X_test) # ทดสอบระบบด้วย X test
+Y_predict_new = model.predict(new_X) # ลอง predict ข้อมูลจริงๆ
+print('If each serum marker levels are ', X_test, ', respectively.')
+print('Outcome will be : ', Y_predict_test, '(Disease)')
+print('If each serum marker levels are ', input, ', respectively.')
+print('Outcome will be : ', Y_predict_new, '(Disease)')
+print('Accuracy:', accuracy_score(Y_test, Y_predict_test)) # ทดสอบความแม่นยำว่า Y_predict ตรงกับ Y_test ที่เราแยกข้อมูลมาตอนแรกแค่ไหน
+                                                            # แต่ถ้าใช้ LinearRegression จะใช้ mean_squared_error, r2_score
 
 # visualization
 fig, ax = plt.subplots()
@@ -129,7 +139,6 @@ plt.text(Disease_age.loc['Negative', '50%'] + 1, 50, 'Median age for non-Disease
 plt.title('Disease and Non-Disease Age distribution.')
 plt.xlabel('Age')
 plt.show()
-
 
 
 sns.set_style('whitegrid')
@@ -148,4 +157,10 @@ g = sns.catplot(x = 'Disease', y = 'A', data = A, kind = 'box', whis = [0, 100],
 g.fig.suptitle('Serum A level difference between Disease and Non-Disease groups.')
 g.set(xlabel = 'Disease', ylabel = 'serum A levels')
 plt.show()
+
+
+# from sklearn.preprocessing import LabelEncoder
+# lbl=LabelEncoder()
+# df["gender"]=lbl.fit_transform(df['gender']) เปลี่ยน categorical variables ให้เป็นตัวเลข เพื่อให้ machine ไปใช้คำนวน
+
 
