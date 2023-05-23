@@ -99,7 +99,7 @@ print('There is  significantly positive correlation between GDP growth and CO2 e
 
 # Data visualization
 sns.set_style('whitegrid')
-sns.barplot(data = thai, x = 'Item', y = 'Value', hue = 'Element', palette = sns.color_palette('Reds', 2)[::-1])
+sns.barplot(data = thai_carbon_emission, x = 'Item', y = 'Value', palette = sns.color_palette('Reds', 2)[::-1])
 plt.xlabel('Causes')
 plt.ylabel('Unit(Kilotonnes)')
 plt.title('Average Carbondioxide emissions in Thailand over the last two decades.')

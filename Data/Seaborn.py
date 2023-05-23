@@ -46,6 +46,7 @@ plt.show()
 # sns.catplot(x = 'columns that are categorical variables', y = 'columns that are continuous variables', data = df, kind = 'point', capsize = 0.2, order = ['','',...])
         # point plot จะเหมือน barplot แต่อ่านง่ายกว่า มีการแสดงเส้นของ 95% CI เหมือนกัน, ถ้าอยากปิด ci -> ci = False
         # ถ้าหากอยากลบเส้นเชื่อม join = False
+        # dodge = True : set ให้แต่ละ hue ของ pointplot ไม่เหลื่อมกัน
         # ค่ากลาง default คือ mean ถ้าอยากเปลี่ยนเป้น median - > estimator = median
 # sns.catplot() สามารถแยกเป็น subplot โดยใส่ argument row = '', col = '' เช่นเดียวกับ .relplot()
 # sns.catplot(x = 'columns that are categorical variables', y = 'columns that are continuous variables', data = df, kind = 'box', sym = '', whis = [0, 100], order = ['','',...])
@@ -53,13 +54,13 @@ plt.show()
 # sns.set_style()
 # sns.set_palette()
 # sns.set_context() : 'paper', 'notebook', 'talk', 'poster'
-# g = sns.catplot()
-        # g.fig.suptitle('') : ชื่อ Main title 
-        # g.set_titles ('{column_name}') : ในกรณีที่มี row = '', col = '' argument เพื่อแยก subplot , หรือกรณีที่ไม่ใช้ relplot() หรือ catplot()
-        # g.set(xlabel = '', ylabel = '')
+# ax = sns.catplot()
+        # ax.fig.suptitle('') : ชื่อ Main title 
+        # ax.set_titles ('{column_name}') : ในกรณีที่มี row = '', col = '' argument เพื่อแยก subplot , หรือกรณีที่ไม่ใช้ relplot() หรือ catplot()
+        # ax.set(xlabel = '', ylabel = '')
 # plt.xticks(rotation = 90)
 # sns.heatmap(df.corr(), annot = True)
-# sns.pairplot(data = df, vars = ['', '', '']) : vars คือ columns ของตัวแปรที่สนใจ
+# sns.pairplot(data = df, vars = ['', '', ''], hue = '', palette = '', plot_kws = {'alpha':0.5}) : vars คือ columns ของตัวแปรที่สนใจ
 # sns.histplot(data = df, x = '', hue = '', bins = )
         # sns.kdeplot(data = df, x = '', hue = '', bins = , cut = ) : จะดูง่ายกว่ากรณีมีหลาย plot ซ้อนทับกัน, cut เป็น argument เสริม ที่บอกว่าแกน X จะให้เริ่มต้นที่ค่าไหน
                 # cumulative = True : เปลี่ยนจากกราฟการกระจาย เป็นกราฟ cumulative
@@ -67,6 +68,7 @@ plt.show()
 
 # intermediate seaborn 
 # style
+        # sns.set(font_scale = 1.0)
         # sns.set_style(['white', 'dark', 'whitegrid', 'darkgrid', 'ticks'])
         # sns.despine(left = True) : remove y axis of left side
 # custom palettes 
@@ -75,7 +77,43 @@ plt.show()
         # Diverging colors : sns.color_palette('BrBG', 12) 
         # reverse colors : sns.color_palette('BrBG', 12)[::-1]
 # one variable : distribution plot     
-        # sns.displot(data = df, x = '', kind = 'hist', kde = True, fill = True, bins = ) : แสดงทั้ง histogram & kde plot
+        # sns.displot(data = df, x = '', kind = 'hist', kde = True, fill = True, bins = , alpha = 0.5) : แสดงทั้ง histogram & kde plot
 # two variables : regression plot
-        # sns.lmplot(data = df, x = '', y = '', ci = 95, hue = '', col = '')
+        # sns.lmplot(data = df, x = '', y = '', ci = 95, hue = '', col = '', row = '', col_order = ['', '',...], scatter_kws = {'alpha' : 0.5}, line_kws = {'color' : 'orange'})
 
+# custom seaborn with matplotlib
+        # fig, (ax0, ax1) = plt.subplots(nrows = 1, ncols =2, sharey = True) : sharey =  all subplots will share the same y-axis scale
+        # sns.histplot(ax = ax0)
+        # sns.histplot(ax = ax1)
+        # ax1.set(xlabel = '', xlim = (0, 10000))
+        # ax1.axvline(x = 5000, label = '', linestyle = '--', color = '')
+        # ax1.legend
+
+# categorical plot types : either x or y axis may be categorical variables
+        # show each individual observations : stripplot / swarmplot
+        # show abstract representations : boxplot / violinplot / boxenplot
+        # statistical estimates : barplot / pointplot / countplot
+        # matrix plot : 
+                # table = pd.crosstab(df['cat1'], df['cat2'], values = df['continuous variables']. aggfunc = 'mean').round(0)
+                # sns.heatmap(table, annot = True, fmt = 'd', cmap = 'YlGnBu', cbar = False, linewidths = .5)
+                        # cmap = color palette, cbar = color bar, fmt = display value in cells as integer
+                # sns.heatmap(df[['', '', '', '']].corr(), cmap = 'YlGnBu')
+                        # plt.xticks(rotation = 90)
+
+# regression plot       
+        # sns.regplot(data = , x = '', y = '') : order = 2 กรณีเป็น polynomial regression model
+                # x_bins = แบ่งกลุ่มในข้อมูลเป็น bins โดย estimator เป็น mean 
+        # sns.residplot(data = , x = '', y = '') : order = 2 กรณีเป็น polynomial regression model
+                # horizontal line at y=0 to indicate the ideal case where the predicted values match the observed values perfectly
+                # useful for assessing the goodness-of-fit of a linear regression model and detecting potential violations of its assumptions
+
+# joint grid : plot 2 plot ลงบนภาพเดียว โดยจะมี scatterplot & histogram ontop
+        # g = sns.JointGrid(data = df, x = '', y ='') : X & Y เป็น continuous variables
+        # g.plot(sns.regplot, sns.histplot) or more advanced
+                # g.plot_joint(sns.kdeplot)
+                # g.plot_marginals(sns.kdeplot, shade = True)
+# joint plot : more easier than joint grid
+        # sns.jointplot(data =df, x = '', y = '', kind = 'hex/scatter/reg/resid/kde') 
+                # ถ้า kind = 'reg/resid' ควรใส่ argument order = 2 ถ้าหากหาความสัมพันธ์แบบ polynomial regression
+        # example :
+                # g = (sns.jointplot(data =df, x = '', y = '', kind = 'scatter').plot_joint(sns.kdeplot))
