@@ -1,0 +1,920 @@
+-------------------------------------------------------------------------------------IMPORT TOOLS--------------------------------------------------------------------------------------
+# BASIC TOOLS
+import numpy as np
+import pandas as pd
+import datetime as dt
+
+# STATISTIC TOOLS
+import matplotlib.pyplot as plt 
+import seaborn as sns
+import scipy.stats as stats
+import pingouin as pg 
+import statsmodels.formula.api as smf
+from lifelines import KaplanMeierFitter, NelsonAalenFitter, CoxPHFitter
+
+# PRE - PROCESSING TOOLS 
+from sklearn.pipeline import make_pipeline, Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, PowerTransformer, LabelEncoder
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+
+# SUPERVISED LEARNING TOOLS
+from sklearn.model_selection import train_test_split, KFold, cross_val_score, GridSearchCV
+from sklearn.linear_model import LinearRegression, LogisticRegression, Lasso, Ridge
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC 
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import VotingClassifier, BaggingClassifier, RandomForestClassifier, RandomForestRegressor, AdaBoostClassifier, AdaBoostRegressor, GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix, classification_report, roc_curve, roc_auc_score
+
+# UNSUPERVISED LEARNING TOOLS
+from sklearn.cluster import KMeans
+from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
+from sklearn.manifold import TSNE 
+from sklearn.decomposition import PCA, NMF
+
+# DEEP LEARNING TOOLS 
+from sklearn.neural_network import MLPRegressor, MLPClassifier
+
+
+-------------------------------------------------------------------------------------IMPORT DATA-----------------------------------------------------------------------------------------
+
+# IMPORT CSV FILE
+df = pd.read_csv('filename.csv', comment = '#')
+    comment = '#' : บรรทัดไหนที่เริ่มต้นด้วย # จะถูกข้าม เพราะถือว่าเป็น comment
+
+# IMPORT EXCEL FILE
+xls = pd.ExcelFile('filename.xlsx')
+    print(xls.sheet_names) : ได้ list ของชื่อแต่ละ sheet ใน file excel
+    df = xls.parse('sheetname') : เปิด sheet นั้นๆใน excel มาเป็น df
+    df = xls.parse(0) : เปิด sheet นั้นๆใน excel มาเป็น df, 0 คือ index ของ sheet ใน excel
+
+# IMPORT SQL DATABASE FILE
+from sqlalchemy import create_engine
+engine = create_engine('sqlite:///address.sqlite')
+    print(engine.table_names)
+df = d.read_sql_query("SELECT * FROM table", engine) : * หมายถึงเลือกทั้ง table มาเป็น dataframe
+    "SELECT orderid, date, name FROM table" : ระบุ keys หรือ columns ที่ต้องการ query
+    "SELECT * FROM table WHERE name == 'product'" : เลือก column ที่จะ filter
+
+
+-------------------------------------------------------------------------------------DATA PREPARATION--------------------------------------------------------------------------------------
+
+# UNDERSTAND THE DATA
+
+pd.set_option('display.max_columns', 200)
+df.head(10)
+df.shape
+df.columns
+df.index
+df.info()
+df.isna().sum()
+df.isna().any() : column ไหนมี nan value
+df.dtypes
+    df.select_dtypes(include = ['object']) : select only columns which are categorical data
+    df[''].astype('category/int/float') : change data type 
+df.values : turn df into numpy 2D arrays
+    array.reshape(-1, 1) : turn numpy 1D arrays into 2D arrays , [1, 2, 3] --> [[1], [2], [3]]
+df[''].unique() : show unique values in selected column
+
+
+
+# JOINING DATA
+
+newdf = df.merge(df, on = 'name of columns that intercept', suffixes = ('', ''), how = 'left/right/inner/outer') : join horizontally
+newdf = pd.merge_ordered(df_left, df_right, left_on = '', right_on = '', how = '') : custom horizotal joining 
+newdf = pd.concat([df1, df2, df3], ignore_index = False) : join vertically, if join = 'inner' show only intercept columns
+
+
+
+# DATA CLEANING
+
+    # CREATE DATAFRAME
+df = pd.DataFrame({'column name':np.array([]), 'column name':np.array([])}) or pd.DataFrame(numpy array, columns = [])
+df['new column'] = np.array([])
+df = df.set_index(['', '']) : เลือก column ที่จะนำมาเป็น index
+
+    # RENAME
+df.rename(columns = {'oldname':'newname'}) : rename column
+df[''] = df[''].replace({'oldvalue1':'newvalue1', 'oldvalue2':'newvalue2', ...}) : replace values in the selected column
+
+    # SORT
+df.sort_values(['', ''], ascending = [True, False]) : จัดเรียงลำดับข้อมูลก่อนหลัง ของ column ที่เลือก
+df.sort_index(axis = 0/1, ascending = True/False)
+
+
+    # QUERY
+df = df[['', '', ...]] : select column
+df = df[df[''].isin(['', '', ...])] : query เฉพาะ row ที่ value ใน selected column เหมือนกับใน list ที่กำหนด
+df = df.drop(['', '', ...], axis = 1) : remove selected columns
+df = df[(df[''] == ) & (df[''] == )] : logical query (and) 
+df = df[(df[''] <= ) | (df[''] >= )] : logical query (or)
+    can be applied with 'datetime' values.
+slicing :
+    df.loc['rowstart':'rowend', 'columnstart':'columnend'] : ในกรณี .loc การ slicing นั้น ตัวหลังจะถูกนับรวมไปด้วย
+    df.iloc[rowindex : rowindex, columnindex : columnindex] : ในกรณี .iloc การ slicing นั้นจะ ตัวหลังจะไม่ถูกนับรวม (เช่นเดียวกับการ slicing list index)
+    df.loc/df.iloc[[, , , ...]] : กรณี select specific rows
+df = df[(~df[''].isnull()) & (~df[''].isnull())] : exclude rows ที่มี nan values ของแต่ละ columns
+
+
+    # MISSING AND DUPLICATED VALUE
+df.drop_duplicates(subset= ['', ''], inplace = True) : ลบ record ที่ซ้ำกัน
+df.dropna() : เอา rows ที่มี nan ออกทั้งหมด
+df.fillna(0) : แทนที่ nan ด้วย 0
+df.dropna(subset = ['']) : เลือก column ที่ต้องการ remove nan values
+df[''] = df[''].replace(0, np.nan) : replace ค่า 0 ด้วย nan values
+df[''] = df[''].fillna(method = 'ffill') : แทนค่า nan values ด้วย value ใน row ก่อนหน้า
+df[''] = df[''].fillna('') : replace nan values ด้วย value ที่กำหนด e.g. 'unknown'
+df[''] = df[''].fillna(df[''].mean()) : impute nan values ด้วย mean
+df[''] = df[''].fillna(df[''].value_counts().index[0]) : impute nan values ด้วย mode
+
+
+    # CATEGORICAL DATA
+df[''] = df[''].astype('category') : start โดยการเลือด column ที่ต้องการเปลี่ยนเป็น categorical data type 
+df[''].cat.categories : ดู categories ทั้งหมด
+df[''].value_counts(dropna = False) : ตรวจสอบว่า ใน categorical column มี category ที่เป็น missing value ไหม
+    df.loc[df['column'].isna(), 'column'] = 'others' : เปลี่ยน missing category นั้น เป็น 'others'  
+df[''] = df[''].cat.reorder_categories(new_categories = ['', '', ''], ordered = True, inplace = True) : จัดเรียง categories ใหม่ ในกรณีที่เป็น ordinal data หรือกรณีที่ต้องการเรียงเพื่อ visualization
+    
+
+
+    # VALUE EDITING
+df.loc[df['column'] == original value, 'column'] = new value 
+create new column with for loop and if else condition :
+    new_column = []
+    for index, rows in df.iterrows() :
+        if rows[''] > value :
+            new_column.append('')
+        elif rows[''] <= value :
+            new_column.append('')
+        else :
+            new_column.append('')
+    df[''] = np.array(new_column)
+df[''] = df[''].replace({'original':'edit', 'original':'edit'})
+df['category'] = pd.qcut(df['continuous']), q = 3, labels = ['low', 'medium', 'high'] : แบ่งข้อมูล continuous เป็นจำนวน q categories ที่เท่าๆกัน
+df['category'] = pd.cut(df['continuous'], bins = [0, firstcut, secondcut, np.inf], labels = ['low', 'medium, 'high']) : แบ่งข้อมูล continuous เป็น categories ตาม bins ที่กำหนด 
+    bins = range(0, firstcut), range(firstcut, secondcut), range(secondcut, infinity)
+
+
+
+    # STRING EDITING
+df[''] = df[''].str.replace("characters to remove", "characters to replace them with") : e.g. (",", "") replace , with empty string
+df[['', '']] = df[['', '']].apply(lambda x : x.str.replace("", "")) : กรณีมีมากกว่าหนึ่ง columns ที่ต้องการทำความสะอาดในลักษณะเดียวกัน 
+กรณีมีมากกว่าหนึ่ง columns ที่ต้องการทำความสะอาดในลักษณะเดียวกัน แต่มีมากกว่าหนึ่งตัวอักษรที่ต้องการทำความสะอาด :
+    chars_to_remove = [",", "%", "$"] 
+    cols_to_clean = ["", "", ""]
+    for col in cols_to_clean :
+        for char in chars_to_remove :
+            df[col] = df[col].apply(lammbda x : x.str.replace(char, "")) 
+df[''] = df[''].str.strip() : remove space character : change 'E D I T' to 'EDIT'
+df[''] = df[''].str.title() : 'Edit'
+df[''] = df[''].str.lower() : 'edit'
+sentimental analysis :
+    df[''] = df[df[''].str.len() > number of characters] : filter rows ที่ไม่น่าจะใช่ประโยค แต่อาจจะเป็นแค่คำ หรือ วลี ออกไป
+    df[''] = df[''].str.replace('[^a-zA-Z]', ' ') : replace all non letter characters with space, [a-zA-Z] == all letter characters, can input other character lists such as [aeiou]
+    df[''] = df[''].str.split(r'[@|#|,|\s+]') : split ประโยคเป็น word ใส่ใน list
+        wordcount = df[''].explode().value_counts(normalilze = True) : หา common words ใน column จาก list ที่ได้ split word ออกมา
+    df[''] = df[''].apply(lambda x = x[0]) : เลือกมาเฉพาะ คำแรก ใน list   
+miss spelling : example 'united states'
+    df[df[''].str.contains('united')] : ตรวจสอบว่ามีคำที่ต้องสงสัยว่าสะกดผิดไหม 
+    df[''] = np.where(df[''].str.contains('united'), 1, 0) : เปลี่ยน data ที่มี word ที่กำหนด ให้เป็น integer code กรณี prepare data for machine learning modeling
+    df[''] = np.where((df[''].str.contains('united')) | (df[''].str.contains('U.S.A.')), 1, 0) : กรณีมีมากกว่า 1 กรณี ในการสะกดต่างกัน แต่ให้ความหมายเหมือนกัน
+
+
+    # DATETIME
+df[''] = pd.to_datetime(df[''], utc = True, format = '%Y%m%d') : create column ที่เป็น datetime value 
+    infer_datetime_format = True : คือ สรุป format input กับ output ให้เลย
+    errors = 'coerce' : return ค่าที่ไม่น่าใช่ datetime ออกมาเป็น NaT (Not a Time)
+df[''] = pd.to_datetime(df['year'] + '-' +df['month']) : ผสาน column year month date เข้าด้วยกัน
+df[''] = df[''].dt.strftime('%Y-%m-%d') : เปลี่ยน datetime values ใน column ให้เป็น custom string format ตามที่ระบุ
+
+df['date'] = df['datetime'].dt.date : ตัดเวลาออก เอามาแค่วันเดือนปี
+df['year'] = df['datetime'].dt.year
+df['month'] = df['datetime'].dt.month
+df['weekday'] = df['datetime'].dt.weekday : monday = 0, sunday = 6
+df['decade'] = (np.floor(df['year'] / 10) * 10).astype(int) : np.floor(float) ปัดเศษลง
+today = dt.date.today()
+กรณีที่ datetime value ใช้ไม่ได้ เช่น มี พ.ศ. : ให้ turn column to string datatype แล้ว split string เป็น column year, month, day เพื่อ clean ก่อน แล้วค่อยเอามารวมด้วย pd.to_datetime() 
+
+
+        
+
+
+
+----------------------------------------------------------------------------------DATA ANALYSIS----------------------------------------------------------------------------------------
+
+# FUNDAMENTAL STATISTICS
+
+    # SAMPLING
+simple random : df.sample(n, replace = True, random_state = 123)
+systematic random :
+    sampling = df.sample(frac = 1, replace = True, random_state = 123) : frac = 1 หมายถึงนำ ทั้ง whole dataset มา shuffle
+    interval = pop_size // sample_size , pop_size = len(df), sample_size = n
+    sampling = sampling.iloc[::interval]
+    sampling = sampling.reset_index()
+proportional stratified random :
+    sampling = df.groupby('category').sample(frac = 0.5, random_state = 123) : sampling มา 0.5 ส่วนของ dataset
+    sampling['category'].value_counts(normalize = True) : sample ใหม่ที่ได้จะมีสัดส่วนของ category เท่ากับ original dataset
+equal counts stratified sampling :
+    sampling = df.groupby('country').sample(n = n, random_state = 123) : กรณีนี้จะได้สัดส่วนของแต่ละ category ไม่เท่ากับ original dataset
+    sampling['category'].value_counts(normalize = False) : แต่จะได้สัดส่วนแต่ละ category เท่ากัน ที่ category ละ n rows
+cluster sampling + multi-stage sampling : 
+    import random
+    cluster = random.sample(list(df['category'].unique()), k = k) : สุ่ม cluster มา k cluster จาก category ที่ระบุ
+    sampling = df[df['category'].isin(cluster)] : จะได้ sample ที่มี category เดียวกับที่สุ่มได้
+    sampling = sampling.groupby('category').sample(n = n, random_state = 123) : stratified sampling อีกที
+np.linspace(0, 1, 6) = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0] : สามารถใช้ เป็น bins ตอน plot histogram, search for best model hyperparameters ได้เช่นกัน
+
+
+    # PROBABILITY  
+probability = number of ways the event can happen / total number of possible outcomes
+law of large numbers : ถ้าเราทำการทดลองสุ่มหนึ่งขึ้นเป็นจำนวนมากๆ แล้วค่าความน่าจะเป็นที่เกิดขึ้นจากการทดลองสุ่มนั้น จะมีค่าใกล้เคียงความน่าจะเป็นที่ได้จากทฤษฎี e.g. การทอยเหรียญหัวก้อย ซึ่งจำนวนครั้งแรกๆความน่าจะเป็นยังไม่เข้าใกล้ 0.5
+np.random.seed() : บันทึกลำดับการสุ่มนี้ไว้
+np.random.uniform(low = min, high = max, size = n) : random number จาก uniform distribution ที่กำหนด
+np.random.normal(loc = mean, scale = S.D., size = n) : random number จาก normal distribution ที่กำหนด
+ีืuniform distribution :
+    scipy.stats.uniform.cdf(value, lowerlimit, upperlimit) : หาพื้นที่ใต้กราฟ หรือ probability ของ value ที่กำหนด ใน uniform distribution, โดยพื้นที่ใต้กราฟทั้งหมดจะเท่ากับ 1 เสมอ
+    scipy.stats.uniform.rvs(lowerlimit, upperlimit - lowerlimit, size = n) : generate random number ภายใน uniform distribution ที่กำหนด
+binomial distribution : ใช้ได้ในกรณีที่เป็นการสุ่มแบบใส่คืนเท่านั้น
+    scipy.stats.binom.pmf(8, 10, 0.5) = โอกาสที่จะออกหัว 8 ครั้ง จากการโยนเหรียญทั้งหมด 10 ครั้ง โดยที่แต่ละครั้งมีโอกาสออกหัว 50 เปอร์เซนต์
+    scipy.stats.binom.cdf(8, 10, 0.5) = โอกาสที่จะออกหัว ตั้งแต่ 1-8 ครั้ง จากการโยนเหรียญทั้งหมด 10 ครั้ง โดยที่แต่ละครั้งมีโอกาสออกหัว 50 เปอร์เซนต์
+    1 - binom.cdf(8, 10, 0.5) = โอกาสที่จะออกหัว มากกว่า 8  ครั้ง จากการโยนเหรียญทั้งหมด 10 ครั้ง โดยที่แต่ละครั้งมีโอกาสออกหัว 50 เปอร์เซนต์
+    scipy.stats.binom.rvs(number of coins(จำนวนเหรียญต่อการโยน 1 ครั้ง), prob of success(โอกาสที่จะออกหัว), range of trials(จำนวนครั้งที่ทาย)) : generate random number มาเป็นแบบ binomial distribution โดยแต่ละครั้งจะนำเหรียญที่ออกหัว(1) มาบวกกัน
+normal distribution : 95% of area under curve is between -2S.D. and +2S.D.
+    scipy.stats.norm.cdf(value, mean, S.D.) : หาพื้นที่ใต้กราฟ หรือ probability ที่จะได้ค่าน้อยกว่าเท่ากับ value ใน normal distribution ที่กำหนด 
+    scipy.stats.norm.ppf(percent, mean, S.D.) : หาจำนวนที่อยู่บริเวณ percent point ของกราฟ normal distribution
+    scipy.stats.norm.rvs (mean, S.D., size) : generate random number เป็น normal distribution ตามที่กำหนด
+
+
+
+    # INFERENTIAL STATISTICS
+relative error = (abs(population_mean - sample_mean) / population_mean) * 100 : ยิ่ง sample size ใหญ่ จะทำให้ sample_mean ใกล้เคียง population_mean ดังนั้น relative error จะยิ่งน้อย 
+central limit theorem : 
+    - ยิ่ง sample size มาก จะพบว่า range ของ แกน X ใน distribution plot จะยิ่งแคบ (S.D. ลดลง) และเข้าใกล้ True population distribution ซึ่งเป็น normal distribution มากขึ้นเรื่อยๆ
+    - นำหลักการนี้มาใช้กับ Confidential interval เนื่องจากชีวิตจริงเราไม่สามารถมา sampling กลุ่มตัวอย่างวิจัยใหม่เป็นร้อยรอบ
+sampling distribution :
+    mean = []
+    for i in range(100) : sampling กลุ่มตัวอย่าง 100 ครั้ง จาก population
+        mean.append(population.sample(n = n)['column'].mean()) : โดยแต่ละ sample ขนาดเท่ากับ n 
+    plt.hist(mean) : จะเห็นว่ายิ่ง sample size มาก ค่า mean จะเข้าใกล้ population mean
+ิbooststrapping : treat dataset as a sample and use it to build up theoretical population.
+booststrap distribution :
+    mean_booststrap = [] : สามารถใช้ estimator อื่น นอกจาก mean ได้ ในกรณีของ booststrap distribution เช่น risk ratio, odd ratio, area under ROC curve
+    for i in range(100) :0
+        mean_booststrap.append(np.mean(df.sample(frac = 1, replace =True)['continuous']))
+    plt.hist(mean_booststrap)
+booststrap distribution mean :
+    - usually close to true sample mean, but may not be a good estimate of the population mean
+    - it is generally great for estimating population standard deviaiton ***
+    - cannot correct biases from sampling
+standard error (standard deviation of sampling distribution) = population S.D. / np.sqrt(sample_size) = np.std(mean_booststrap, ddof = 1) : ddof = 1 คือตัวหารของ S.D. จะเปลี่ยนจาก n เป็น n - 1 หรือก็คือเปลี่ยนจาก population S.D. เป็น sample S.D. 
+Confidential interval : values within standard deviation of the mean distribution (mean_booststrap) or others estimator boostrap (such as risk ratio distribution)
+    quantile method for 95% CI : [np.quantile(mean_booststrap, 0.025), np.quantile(mean_booststrap, 0.975)]
+    standard error method for 95% CI : 
+        point_estimate = np.mean(mean_booststrap)
+        std_err = np.std(mean_booststrap, ddof = 1)
+        lower_bound = scipy.stats.norm.ppf(0.025, loc = point_estimate, scale = std_err)
+        upper_bound = scipy.stats.norm.ppf(0.975, loc = point_estimate, scale = std_err)
+
+
+
+    # DESCRIPTIVE STATISTICS
+- mean for symmetrical continuous data
+- median for asymmetrical continuous data(left or right skewed) , 0.5 quantile = median
+- mode for categorical data
+df.describe() 
+df.nlargest(n, 'column') : แสดงผลจำนวนที่มากที่สุด n อันดับ ของ 'column' ใน df (อันดับแรกก็คือ mode นั่นเอง)
+df[''].mean() or .mode(), .median(), .var(), .std() 
+df[''].quartile(x) e.g. range(0,101).quartile(0.75) = 75
+df[''].max() or .min()
+df['cumulative'] = df[''].cumsum(), .cummax(), cummin() :
+    data = [3, 1, 4, 1, 5, 9, 2, 6, 5]
+    data.cumsum() = [3, 4, 8, 9, 14, 23, 25, 31, 36]
+    data.cummax() = [3, 3, 4, 4, 5, 9, 9, 9, 9]
+    data.cummin() = [3, 1, 1, 1, 1, 1, 1, 1, 1]
+numpy tools :
+    mean : np.mean(df[''])  
+    median : np.median(df[''])  
+    variance : np.var(df['column'], ddof = 1)  : ddof = 1 หมายถึงคำนวน sample variance ถ้าไม่ระบุ คือ population variance
+    S.D. : np.std(df['column'], ddof = 1) or np.sqrt(np.var(df['column'], ddof = 1))
+    quantile : np.quantile(df[''], 0.5) or np.quantile(df[''], [0.25, 0.75]) 
+    iqr : np.quantile(df[''], 0.75) - np.quantile(df[''], 0.25)
+pandas tools :
+    mode : df[''].value_counts(ascending = False, normalize = False) : ใช้นับ categorical data, normalize = True หมายถึงให้แสดงเป็น proportion , .reset_index() หากต้องการเปลี่ยนเป็น dataframe
+    grouping : 
+        df.groupby('category', as_index = False)['data'].mean() or .median() or .value_counts() and others : as_index = True หมายถึง category ที่ถูก grouping มาจะเป็น index
+        df.groupby('')[''].agg([np.mean, np.median]) : ใช้ .agg() ช่วยเมื่อต้องการ group มาหาค่าทางสถิติหลายค่า
+    pivot : df.pivot_table(values = 'column', index = 'category', columns = 'category', aggfunc = [np.mean, np.median], margins = False, fill_value = 0) : fill_value = 0 หมายถึง fill nan values with 0
+    un-pivot : df.melt(id_vars = ['', ''], var_name = '', value_name = '') : ผลลัพธ์ที่ได้ จะเปลี่ยนจาก pivot table มาอยู่ในรูปแบบของ .groupby() ที่ยังไม่ได้ aggregate statistical functions
+        id_vars : column ที่คงสถานะไว้
+        var_name : group by catrgorical column
+        value_name : continuous value column
+outlier : การ remove outlier จะช่วยเพิ่มความแม่นยำให้ models
+    - quartile method
+    data < np.quantile(df[''], 0.25) - 1.5 * iqr(df['']) and 
+    data > np.quantile(df[''], 0.75) + 1.5 * iqr(df[''])
+    - standard deviation method : ข้อมูลที่น้อยกว่า -3S.D. และมากกว่า +3S.D. จัดเป็น outlier 
+    lower, upper = df[''].mean - 3 * df[''].std(), df[''].mean() + 3 * df[''].std()
+
+
+    
+# HYPOTHESIS TESTING
+
+    # PARAMETRIC & NON-PARAMETRIC TESTS
+- significant level(alpha) = 0.05, confidential interval = 1- alpha = 0.95 or 95% CI
+- p-value is area under probability curve of interested events.
+- if p-value < alpha : reject null hypothesis : the event that rejects this null hypothesis did not occur by chance.
+- if p-value >= alpha : can not reject null hypothesis : there is no enough evidences to reject null hypothesis.
+- test for normality : scipy.stats.shapiro(df['']) :
+    - if p-value < 0.5 : the data is not normal distritibuted.
+    - if p-value >= 0.5 : the data is normal distributed.
+- z-score or z-statistics : indicates how many standard deviations the data point's estimate of the "sample mean" is above or below the "mean of the hypothesis or mean of the control group".
+    : (mean - mean of the hypothesis) / standard error
+right-tailed test (H1 : sample mean > mean of the hypothesis) : p-value = 1-scipy.stats.norm.cdf(z_score, loc = 0, scale = 1)
+left-tailed test (H1 : sample mean < mean of the hypothesis) : p-value = scipy.stats.norm.cdf(z_score, loc = 0, scale = 1)
+two-tailed test (H1 : sample mean != mean of the hypothesis) : p-value = 2 * (1-scipy.stats.norm.cdf(z_score, loc = 0, scale = 1))
+paired t-test example :
+    null hypothesis : there is no statistically significant of score between mean of group A in 2020 and mean of group A in 2010 (two-tailed test)
+    mean_A_2020 = df[(df['group'] == 'A') & (df['year'] == 2020)]['score'].mean()
+    mean_A_2010 = df[(df['group'] == 'A') & (df['year'] == 2010)]['score'].mean()   
+    std_err = np.sqrt(np.var(score_A_2020 - score_A_2010))
+    degree_of_freedom = number of group A - 1
+    t_statistic = (mean_A_2020 - mean_A_2010) / std_err
+independent t-test example :
+    null hypothesis : there is no statistically significant of score between mean of group A and mean of group B (two-tailed test)
+    mean_A = df[df['group'] == 'A']['score'].mean()
+    mean_B = df[df['group'] == 'B']['score'].mean()
+    std_err = np.sqrt(np.var(score_A) + np.var(score_B))
+    t_statistic = (mean_A - mean_B) / std_err
+    degree_of_freedom = number of group A + number of group B - 2
+then calculate significant value :
+right-tailed test : p-value = 1 - scipy.stats.t.cdf(t_statistic, df = degree_of_freedom)
+left-tailed test : p-value = scipy.stats.t.cdf(t_statistic, df = degree_of_freedom)
+two-tailed test : p-value = 2 * (1 - scipy.stats.t.cdf(t_statistic, df = degree_of_freedom))
+tools : 
+    pengouin.ttest(df['groupA']['continuous'], df['groupB']['continuous'], paired = True/False, alternative = 'greater/less/two-sided') 
+    pengouin.anova(data = , dv = '', between = '', padjust = 'none') : three or more different groups
+    pengouin.pairwise_tests(data = , dv='', between='', padjust='none') : perform multiple pairwise comparisons
+         dv = dependent variable continuous column, between = groups
+         padjust = 'none' แสดง p-value of two levels being compared on each row.
+         padjust = 'bonf' แสดง p-value of two levels being compared on each row ที่ได้รับ bonferroni correction :
+            correct the probability of making at least one Type I error (alpha error : H0 is True, but the test reject H0) across all tests ซึ่งเกิดขึ้นได้ใน multiple comparisons อาจจะมีบางคู่ไม่เกี่ยวข้องกัน แต่พบความสัมพันธ์โดยบังเอิญ
+proportional test : chi-square test
+    chi2 statistic = z-score (of difference between frequency of each category) ** 2
+    null hypothesis : There is no significant association or relationship between the two categorical variables. In other words, the two variables are independent of each other.
+        in the context of baseline characteristic comparisons in clinical trials : we need p-value > 0.05 or accept H0 : There is no significant difference in the baseline categorical frequency of the intervention and control groups..
+    group_categorical_baseline = df.groupby('category_baseline')['group'].value_counts(normalize = True)
+    group_categorical_baseline = group_categorical_baseline.unstack()
+    group_categorical_baseline.plot(kind = 'bar', stacked = True, color = ['lavender', 'cornflowerblue', 'navy'])
+    expected, observed, stats = pingouin.chi2_independence(data = df, x = 'group', y = 'category_baseline')
+    print(stats)
+non-parametric tests : 
+    - กรณีที่ sample size น้อย ทำให้ central limit theorem ไม่เป็นจริงกับชุดข้อมูลดังกล่าว (ไม่สามารถ assume ข้อมูลดังกล่าวได้ว่าเป็น normal distribution ใน population), ทำให้ confidential interval กว้าง, เพิ่มโอกาสการเกิด false positive & negative
+    -for parametric test : 
+        - sample size >= 30 ในแต่ละกลุ่ม ถึงสามารถ assume ว่าหากมาทำ bootstrap distribution แล้ว จะเป้นไปตาม central limit theorem
+        - sample size >= 5 ในแต่ละกลุ่มของ chi-square test
+    wilcoxon-signed rank (in stead of paired t-test) : pingouin.wilcoxon(x = df['group_post'], y = df['group_pre'], alternative = 'greater/less/two-sided')
+    mann-whitney test (in stead of unpaired t-test) : pingouin.mwu(df['groupA']['continuous'], df['groupB']['continuous'], alternative = 'greater/less/two-sided')
+    kruskal-wallis (in stead of anova) : pingouin.kruskal(data = , dv = 'dependent_variables_continuous_column', between = 'category_column')
+
+
+
+    # CALCULATE CONFIDENTIAL INTERVAL IN CONTEXT OF MEASUREMENT IN EPIDEMIOLOGY
+create table : pd.crosstab(df['exposure category'], df['outcome category'])
+alpha = 0.05
+z_alpha = stats.norm.ppf(1-(alpha/2)) = 1.96
+mean difference : 
+    standard error = np.sqrt((np.var(groupA)/len(groupA)) + (np.var(groupB)/len(groupB)))
+    CI_low = mean difference - (z_alpha * standard error)
+    CI_high = mean difference + (z_alpha * standard error)
+relative risk : 
+    log standard error = np.sqrt(1/a - 1/(a + b) + 1/c - 1/(c + d))
+    CI_low = np.exp(np.log(relative risk) - z_alpha * log standard error)
+    CI_high = np.exp(np.log(relative risk) + z_alpha * log standard error)
+odd ratio : 
+    log standard error = np.sqrt(1/a + 1/b + 1/c + 1/d)
+    CI_low = np.exp(np.log(odd ratio) - z_alpha * log standard error)
+    CI_high = np.exp(np.log(odd ratio) + z_alpha * log standard error)
+
+    
+
+    # REGRESSION STATISTICS
+linear regression : predict continuous variables
+    model = smf.ols("response ~ continuous + continuous", data = df).fit() : กรณีที่ตัวแปรต้นเป็น continuous variables
+    model = smf.ols("response ~ continuous + continuous + categorical + 0", data = df).fit() : กรณีมีตัวแปรต้นเป็น categorical variables การใส่ + 0 หมายถึงการ remove global intercept และใช้ intercept จากแต่ละ category แทน
+    model = smf.ols("response ~ continuous + continuous + categorical + continuous:categorical + 0", data = df).fit() : กรณีที่มี categoical variables ที่สงสัยว่าเป็น interaction terms กับตัวแปรต้นที่สนใจ
+    model.params, model.summary() : show model equations including intercept and coefficients
+    model.rsquared or model.rsquared_adj : correlation coefficient ** 2 : adjusted r squared is more conservative
+    model.mse_resid : mean squared error : residual standard error ** 2 : indicate model goodness of fit
+logistic regression : predict categorical variables
+    model = smf.logit() : syntax เหมือนกับ linear regression 
+    odd ratio = np.exp(coefficient)
+    confusion_matrix = model.pred_table() :   [[true neg, false pos], [false neg, true pos]] 
+        true negative = conf_matrix[0, 0]
+        false positive = conf_matrix[0, 1]
+        false negative = conf_matrix[1, 0]
+        true positive = conf_matrix[1, 1]
+    accuracy = (true positive + true negative) / (true negative + true positive + false negative + false positive)
+    sensitivity = true positive / (true positive + false negative)
+    specificity = true negative / (true negative + false positive)
+
+
+
+
+# DATA VISUALIZATION
+
+    # SET STYLE
+sns.set(font_scale = 1.0)
+sns.set_style('') : white, dark, whitegrid, darkgrid
+palette = sns.color_palette('', number of colors) : set color palette
+display color palettes : sns.palplot(sns.color_palette('', number of colors)) : there are sequential and diverging color palettes
+slicing and reverse colors : sns.color_palette('', number of colors)[::-1]
+rotate x ticks : plt.xticks(rotation = 90)
+display : plt.show()
+
+    # PLOT 
+line plot : sns.lineplot(data =, x = 'time', y = 'value', hue = 'categorical column') : จัดรูปแบบ dataframe ให้อยู่ในรูปแบบ df.groupby('time')['value'].agg() & unstack ก่อน
+distribution plot : sns.displot(data = df, x = '', hue = 'group', kind = 'hist', kde = True, fill = True, bins = , alpha = 0.5)
+regression plot :  
+    sns.lmplot(data = df, x = '', y = '', ci = 95, hue = '', col = '', row = '', col_order = ['', '',...], scatter_kws = {'alpha' : 0.5, 'color' : 'blue'}, line_kws = {'color' : 'red'}) : lowess = True กรณี non-linear relationship
+    sns.regplot(x = 'Y_test', y = 'Y_predict') : x_bins = แบ่งกลุ่มในข้อมูลเป็น bins โดย estimator เป็น mean, order = n กรณี polynomial or non linear regression 
+categorical plot : either x or y axis may be categorical variables
+    sns.boxplot(data =, x = '', y = '', hue = '', whis = [0,100], order = ['', '', '']) 
+    sns.violinplot(data =, x = '', y = '', hue = '', whis = [0,100], order = ['', '', '']) 
+statistical estimation plot : 
+    sns.countplot(data =, x = 'categorical column', hue = '', , order = ['', '', '']) : นับจำนวน categorical data
+    sns.barplot(data =, x = 'categorical column', y = 'continuous column', hue = '', , order = ['', '', ''], CI = True, estimator = mean/median)
+    sns.pointplot(data =, x = 'categorical column', y = 'continuous column', hue = '', , order = ['', '', ''], join = True, CI = True, estimator = mean/median, dodge = True) : dodge argument คือให้ hue ของแต่ละ categorical ไม่เหลื่อมกัน
+custom seaborn with matplotlib :
+    fig, (ax0, ax1) = plt.subplots(nrows = , ncols =, figsize = (, ),sharey = True) : sharey =  all subplots will share the same y-axis scale
+    sns.histplot(ax = ax0) : can use with other plot types
+    sns.histplot(ax = ax1)
+    ax.set_xlabel()
+    ax.set_ylabel()
+    ax.set_title()
+    ax.set(xlabel = '', xlim = (0, n)) : modify x axis range
+    ax.tick_params(axis='x', labelrotation=45) : rotate x axis labels
+    ax.text(x = , y = , s= 'text') : write text in plot with assign x and y position
+    ax.axvline(x = , label = '', linestyle = '--', color = '') : use in distribution plot
+    ax.legend()
+matrix plot : 
+    for proportional test or measurement in epidemiology visualization :
+        table = pd.crosstab(df['categorical column'], df['categorical column']) : the table could be pivot table
+        sns.heatmap(table, annot = True, fmt = 'd', cmap = 'YlGnBu', cbar = True, linewidths = .5) : cmap = color palette, cbar = color bar, fmt = display value in cells as integer
+    for correlation matrix : ใช้ในการ visualize association analysis with chi - square test ได้ รวมถึง visualize pivot table 
+        sns.heatmap(df[['', '', '', '']].corr(), cmap = 'YlGnBu') 
+
+
+# SURVIVAL ANALYSIS
+
+time = df['time_startdrug_to_event']
+event = df['event']
+
+intervention_group = (df['drug'] >= 1)
+control_group = (df['drug'] == 0)
+
+km = KaplanMeierFitter()
+km.fit(time[intervention_group], event[intervention_group], label = 'intervention')
+ax = km.plot(ci_show = False)
+
+km.fit(time[control_group], event[control_group], label = 'placebo')
+km.plot(ax = ax, ci_show = False)
+
+plt.title("Kaplan-Meier Survival Curves for Different Intervention Groups")
+plt.xlabel("Time to Event")
+plt.ylabel("Survival from event probability")
+plt.grid(True)
+plt.show()
+
+modified plot to cumulative incidence (%) with NelsonAalenFitter : กรณีจะดูจำนวนของ Adverse events ที่เกิดขึ้น
+
+    na = NelsonAalenFitter()
+    na.fit(time[intervention], event[intervention], label = 'intervention')
+    ax = na.plot(ci_show = False)
+
+    na.fit(time[placebo], event[placebo], label = 'placebo')
+
+    na.plot_cumulative_hazard(ax = ax, ci_show = False)
+
+    plt.title("Cumulative Incidence of Adverse Events by Different Groups")
+    plt.xlabel('Time to Event')
+    plt.ylabel('Cumulative incidence ratio(%)')
+    plt.grid(True)
+    plt.show()
+
+cox proportional hazard model : 
+    cox = CoxPHFitter()
+    cox.fit(df, 'time_startdrug_to_event', event_col = 'event')
+    print('The exp(coef) is Hazard Ratio.')
+    cox.plot()
+    cox.summary
+
+
+
+
+-------------------------------------------------------------------------------------PRE-PROCESSING--------------------------------------------------------------------------------------
+    
+    # FEATURE SELECTION :
+removing redundant features : reduce noise when modeling by removing statistically correlated features
+    df[['', '']].corr() : use pearson correlation to find strongly correlated numerical features (coeffient close to -1 or 1) 
+    df.drop(['', ''], axis = 1) :  drop columns that have strong correlation with others
+dimensionality reduction : reduce model overfitting for supervised learning, but could be used for clustering in unsupervised learning model
+    - exclude redundant features to reduce model overfitting 
+    - use with only continuous variables 
+    - read other details below
+
+    # FEATURE ENGINEERING : create new features based on existing features
+create dummy variables :
+ื    nominal data : 
+        dummy = pd.get_dummies(df[[categorical columns]], prefix = '') : generate dummy
+        df_dummy = pd.concat([df, dummy]) : concat dummy dataframe with original dataframe
+        df_dummy = df_dummy.drop([categorical columns], axis = 1) : drop categorical columns ที่ถูกเปลี่ยนเป็น dummy variable เรียบร้อยแล้ว
+    ordinal data : ทำการเปลี่ยนเป็น category datatype แล้ว reorder ก่อน
+        labelencoder = LabelEncoder()
+        df['ordinal'] = labelencoder.fit_transform(df[''])
+        labelencoder.classes_ : recall the order of values 
+    complicated conditions in the columns : เช่น column โรคประจำตัวคนไข้ที่ แต่ละคนจะมี underlying conditions ไม่ซ้ำกัน 
+        conditions = ['firstcondition', 'secondcondition', 'thirdcondition'] : เลือก conditions ที่เราสนใจที่จะนำมาวิเคราะห์ หรือสร้างโมเดล
+        for i in conditions :
+            df[i] = np.where(df['underlying'].str.contains(i), 1, 0)
+engineering numerical features :
+    reduce dimension : มี n columns เป็น numerical data ของ n days ต้องการสร้าง column ที่เป็น statistical estimation ของทั้ง n days
+        df[''] = df.loc[:, 'start column':'stop column'].function(axis = 1) : function could be mean, median, sum or others
+text engineering :
+    cv = CountVectorizer() or 
+    tf = TfidfVectorizer() 
+        formula : (count of word occurances / total words in document) / log(number of documents that the word is in / total number of documents)
+        benefit : gives more weight to words that appear frequently in a specific document but infrequently in the entire collection of documents
+    arguments : ทั้ง 2 function มี syntax เหมือนกัน
+        min_df = 0.2, max_df = 0.8 : include เฉพาะ word ที่มีสัดส่วนมากกว่า 0.2 และน้อยกว่า 0.8 ใน text, filter out terms that might not carry much meaningful information, such as very common stop words or extremely rare terms that could be noise.
+        stop_words = 'english' : exclude common words which have no significant meaning including "the," "and," "is," "of," "in," "a," and "so"
+    word_matrix = cv.fit_transform(df['text'])
+    word_matrix = word_matrix.toarray()
+    word_df = pd.DataFrame(word_matrix, columns = cv.get_feature_names()).add_prefix('counts_')
+    new_df = pd.concat([df, word_df], axis = 1, sort = False)
+    word_df.sum().sort_values(ascending = False).head() : find most common words
+   
+
+
+    # SPLIT DATA : reduce overfitting, evaluate model performance on unseen dataset, use with only supervised learning model
+X = df[['', '']] : independent or explanatory variables
+y = df[''] : dependent or response variables
+x_train, x_test, y_train, y_test = train_test_split(X.values, y.values, test_size = 0.3, random_state = 123) : stratify = y กรณี y เป็น categorical data เพื่อ correct imbalance classification between train and test set
+
+
+
+    # FEATURE SCALING : reduce model bias and improve model validity 
+minmaxscaler : เปลี่ยนให้ range ของ numerical features อยู่ระหว่าง 0-1 โดย distribution เหมือนเดิม 
+    scaler = MinMaxScaler(feature_range = (0, 1)) or StandardScaler() or PowerTransformer()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+standardscaler or standardization : เปลี่ยนให้ range ของ numerical features มี mean = 0 & S.D. = 1 โดย distribution เหมือนเดิม
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+powertransformer : reduce skewness of numerical data and make the distribution more closely resemble normal distribution
+    scaler = PowerTransformer()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
+
+
+
+--------------------------------------------------------------------------------------SUPERVISED LEARNING---------------------------------------------------------------------------------
+syntax : 
+    model = model(hyperparameters = value)
+    model.fit(X_train,y_train)
+    y_predict = model.predict(X_test)
+    score = model.score(X_test, y_test)
+
+
+    # CLASSIFICATION MODEL  
+k nearest neighbors : 
+    - classifies unseen datapoint ตาม area ที่มี datapoint ที่ใกล้เคียงมากที่สุด 
+    - hyperparameter k : จำนวน datapoint ที่ใกล้เคียงกัน โดยทั่วไปจะอยู่ที่ 5-15
+        - larger k : less complex model -> lead to underfitting (too simplex : low training accuracy)
+        - smaller k : more complex model -> lead to overfitting (more complex : training accuracy > testing accuracy)
+    - hyperparameters for cross validation : {'n_neighbors' : np.arange(1, k + n)}
+logistic regression : 
+    - classifies linear problems based on the probabilities derived from the sigmoid function, which is applied with linear regression
+    - if probability > 0.5 : the data is labeled 1, elif probablity < 0.5 : the data is labeled 0
+    - hyperparameter C : 
+        - larger C : less regularization
+        - smaller C : more regularization (discourages large coefficient values and encourages simpler models resulting in reduction of overfitting)
+    - hyperparameters for cross validation : {'C' : np.linspace(0.001, 10, 5)}
+support vector machine : add argument probablity = True to model() function
+    - find the optimal hyperplane that best separates data points from different classes while maximizing the margin between classes
+    - hyperparameter C :  controls the trade-off between maximizing the margin and minimizing the classification error
+        - larger C : allows for a smaller margin and focuses more on correctly classifying the points but cause overfitting
+        - smaller C : allows for a larger margin and lead to some misclassified points but reduce overfitting
+    - hyperparameter gamma : for non linear classification problems 
+        - kernel = 'rbf' or radial basis function
+        - larger gamma : lead to more complex and overfitting
+        - smaller gamma : lead to more smoother boundaries and reduce overfitting
+    - hyperparameters for cross validation : {'kernel':['linear', 'rbf'], 'C':[0.1, 1.0, 10], 'gamma':np.linspace(0.00001, 10, 7)}
+
+
+
+    # REGRESSION MODEL
+linear regression :
+    - target variable should be continuous variable
+    - y = a1x1 + a2x2 + ... + anxn + b
+    - y  = target variable, x = feature, a = slope coefficient, b = intercept coefficient
+regularized regression :
+    - control overfitting 
+    - large positive coeffients or large negative coeffients lead to model bias or overfitting
+    - hyperparameter alpha :  
+        - larger alpha : more compensate coefficients, but can lead to underfitting 
+        - smaller alpha : less compensate coefficients, but can lead to overfitting
+    - ridge regression : จะชดเชยโดยน้ำหนัก coefficients โดยยังคง features ทั้งหมดเอาไว้
+    - lasso regression : มีแนวโน้มที่จะชดเชยน้ำหนัก coefficients โดยตัด features ที่ไม่สำคัญออกไปเลย
+    - hyperparameters for cross validation : {'alpha':np.linspace(0.1, 1000.0, 5)}
+
+
+    # DECISION TREE : 
+classification tree :
+    - target variable in categorical
+    - able to capture non-linear relationships between features and labels
+    - data structure consisting of a hierarchy of nodes (each node = question or prediction)
+    - three kinds of nodes :
+        - root : no parent node, question giving rise to two children nodes
+        - internal : one parent node, question giving rise to two children nodes
+        - leaf : one parent node, no children nodes --> prediction
+    - hyperparameter :
+        - max_depth : maximum number of levels in the tree : prevent the tree from becoming too deep and overfitting the training data
+        - max_features : number of features to consider when looking for the best split e.g. 0.1 = maximum 10% of features
+        - min_samples_leaf : the minimum number of samples required to be at a leaf node e.g. 0.1 = minimum 10% of training data
+        - criterion : 'gini' or 'entropy'
+    - hyperparameter for cross validation : {'max_depth':np.arange(2, 11), 'max_features':np.linspace(0.2, 0.8, 4), 'min_samples_leaf':np.linspace(0.1, 0.5, 5), 'criterion':['gini', 'entropy']}
+regression tree : 
+    - target variable in continuous
+    - can solve non-linear relationship that linear regression cannot
+    - hyperparameters similar to those for classifier trees
+
+
+
+    # CROSS VALIDATION
+kf = KFold(n_splits = n, shuffle = True, random_state = 123) : cross validation n splits โดย n มักอยู่ระหว่าง 5-10 และ shuffle dataset ก่อน cross validation
+model = model() : choose single classifier or regressor model
+params = {'':[], '':[]} dictionary of model hyperparameters
+model_cv = GridSearchCV(model, param_grid = params, cv = kf)
+model_cv.fit(X_train, y_train) : perform cross validation of train dataset 
+model_cv.best_params_ : display the best model hyperparameters that are suitable for the training dataset through cross-validation
+model_cv.best_score_ : best model cross validation score, accuracy for classifier and r squared for regressor 
+model_best = model_cv.best_estimator_ : generate model with best hyperparameters showed in model_cv.best_params_
+model_best.score(X_test, y_test) : apply best model with test dataset and calculate accuracy for classifier or r squared for regressor 
+
+
+    # ENSEMBLE LEARNING
+qualification :
+    - train different models on the same dataset, let each model make its predictions
+    - meta-model : aggregates predictions of individual models 
+    - final prediction : more robust and less prone to errors
+suggestion : แนะนำว่ามาทำหลัง GridsearchCV ซึ่งได้ best parameters ของแต่ละ model ไปแล้วจะดีมากๆ แล้วค่อยเอามารวมกันเป็น ensemble model
+voting classifier : 
+    - same training set, but different algorithms 
+    - นำ model with best hyperparameters ที่เราหาได้ มาสร้าง voting classifier
+    classifiers = [('LogisticRegression', logreg_best), 
+                   ('KNeighborsClassifier', knn_best),
+                   ('SVC', svc_best), 
+                   ('DecisionTreeClassifier', tree_best)]
+
+    vc = VotingClassifier(estimators = classifiers)
+    vc.fit(X_train, y_train)
+    y_pred = vc.predict(X_test)
+    print('voting classifier score :', accuracy_score(y_test, y_pred))
+bagging classifier :
+    - same algorithm, but different boostrap subsets of dataset
+    - นำ model with best hyperparameters ที่มี accuracy สูงสุด มาสร้าง bagging classifier
+    bc = BaggingClassifier(base_estimator = model_best, n_estimators = 100, random_state = 123) : n_estimators = จำนวนชุดข้อมูลที่จะสุ่มออกมาสร้างแต่ละ model (same algorithm as base_estimator)
+    bc.fit(X_train, y_train)
+    y_pred = bc.predict(X_test)
+    print('bagging classifier accuracy score : {}'.format(accuracy_score(y_test, y_pred)))
+random forest :
+    - หลักการเดียวกับ bagging model แต่ base estimator เป็น decision tree โดยมีทั้ง classification tree และ regression tree
+    rf = RandomForestRegressor(n_estimators = 100, min_samples_leaf = ratio, random_state = 123) or RandomForestClassifier
+    rf.fit(X_train, y_train)
+    y_pred = rf.predict(X_test)
+    print('test set root mean squared error of random forest regressor :', mean_squared_error(y_test, y_pred) ** (1/2))
+adaptive boosting :
+    - combining several weak learners to form a stronger learner
+    - train predictor models sequentially, and each predictor try to correct its predecessor or previous predictor
+    ada = AdaBoostRegressor(base_estimator = model_best, n_estimators = 100) or AdaBoostClassifier
+    ada.fit(X_train, y_train)
+    y_pred = ada.predict(X_test)
+    print('test set root mean squared error of adaptive boosting regressor :', mean_squared_error(y_test, y_pred) ** (1/2))
+gradient boosting :
+    - same principles as adaptive boosting but base estimator is simple decision tree
+    - hyperparameters สามารถ input ได้เหมือนกับ decision tree
+    gdb = GradientBoostingRegressor(n_estimators = 100) or GradientBoostingClassifier 
+        - if want to perform stochastic gradient boosting : subsample < 1.0 e.g. 0.8
+    gdb.fit(X_train, y_train)
+    y_pred = gdb.predict(X_test)
+    print('test set root mean squared error of gradient boosting regressor :', mean_squared_error(y_test, y_pred) ** (1/2))
+
+    
+    # PREDICT PROBABILITY MODEL
+use in classification model such as logistic regression :
+    model_best.fit(X_train, y_train)
+    y_pred = model_best.predict(X_test)
+    y_pred_probs = model_best.predict_proba(X_test)[:, 1] : column 0 is negative probablity, column 1 is positive probablity
+
+
+
+    # EVALUATE MODEL PERFORMANCE
+
+ensembles = {'votingclassifier':vc, 
+          'baggingclassifier':bg, 
+          'randomforestclassifier':rf, 
+          'AdaBoostclassifer':abg,
+          'gradientboostclassifier':gbt}
+results = []
+for name, model in ensembles.items() : 
+    cv = cross_val_score(model, X_train, y_train, cv = kf)
+    results.append(cv)
+plt.boxplot(results, labels = ensembles.keys())
+plt.xticks(rotation = 30)
+plt.ylabel('accuracy score')
+plt.xlabel('ensemble models')
+plt.show()
+
+กรณี evalute classifier models จะมี roc curve ร่วมด้วย
+for name, model in ensembles.items() : 
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    y_pred_probs = model.predict_proba(X_test)[:, 1]
+    print(confusion_matrix(y_test, y_pred))
+    fpr, tpr, thresholds = roc_curve(y_test, y_pred_probs)
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.plot(fpr, tpr)
+    plt.xlabel('false positive rate')
+    plt.ylabel('true positive rate')
+    plt.title('ROC curve of {}'.format(name))
+    plt.show()
+    roc_auc_score(y_test, y_pred_probs)
+
+
+
+---------------------------------------------------------------------------------UNSUPERVISED LEARNING----------------------------------------------------------------------------------
+                                *** doesn't need to split the data into a training and test set but can perform feature scaling to reduce feature variance & bias ***
+                                                          *** the samples dataframe must not have a dependent variable column ***
+                                    *** กรณีที่มี datapoint ใหม่ ก็เขียน pipeline ให้นำ datapoint นั้น เข้ามาใน samples dataframe แล้ว run training workflow ทั้งหมดใหม่ ***
+
+# CLUSTERING TECHNIQUES           
+
+    # KMEANS CLUSTERING
+- centroids : model จะจำค่าเฉลี่ยของแต่ละ cluster หรือก็คือ centroids เพื่อใช้ในการทำนาย new datapoint ใหม่ที่ใส่เข้ามาว่าควรอยู่ใน cluster ไหน โดยเลือก cluster ที่มีตำแหน่ง centroid ใกล้กับ sample ใหม่ที่สุด
+- inertia : วัดว่า แต่ละ datapoint ห่างจาก centroid ของ cluster ที่อยู่ โดยเฉลี่ยเท่าไหร่ โดย inertia น้อยๆ แปลว่า good clustering
+- elbow method :  เมื่อ number of clusters เพิ่มถึงจุดนึง inertia จะไม่ค่อยลดลงตาม จำนวน cluster นั้น คือจำนวนที่เหมาะสม
+- โดยเมื่อได้ number of clusters ที่เหมาะสมแล้ว model จะเลือกวิธี clustering เพื่อให้ มี inertia ต่ำที่สุด
+find appropiate number of clusters :
+    ks = np.arange(1, 6)
+    inertias = []
+    for k in ks :
+        model = KMeans(n_clusters = k)
+        model.fit(samples)
+        inertias.append(model.inertia_)
+    plt.plot(ks, inertias, '-o')
+    plt.xlabel('Number of clusters(k)')
+    plt.ylabel('Inertia')
+    plt.xticks(ks)
+    plt.show()
+fit the model : 
+    km = KMeans(n_clusters = k)
+    km.fit(samples)
+    labels = km.predict(samples)
+evaluate cluster attribute : 
+    samples['cluster'] = labels
+    sns.heatmap(samples.groupby('cluster').mean(), cmap = 'Blues/Oranges', linewidths = 1)
+visualize : 
+    x = samples[:, m] : เลือก m, n column มาเพื่อ visualize
+    y = samples[:, n] 
+    plt.scatter(x, y, c = labels, alpha = 0.5, cmap = 'viridis') : visualize การจัดกลุ่มระหว่าง feature m & n
+    centroids = model.cluster_centers_ # แสดงผล centroids ของแต่ละ cluster 
+    centroids_x = centroids[:, m]       
+    centroids_y = centroids[:, n]
+    plt.scatter(centroids_x, centroids_y, marker = 'D', s = 50)
+    plt.show()
+
+
+    # HIERARCHICAL CLUSTERING
+- height on dendrogram (y-axis) shows distance between each cluster
+fit the model :
+    mergings = linkage(samples, method = 'complete') : 
+        method 'complete' : distance between cluster is the max distance between their samples
+        method 'single' : distance between cluster is the closest distance between their samples
+visualize dendrogram :
+    dendrogram(mergings, leaf_rotation = 90, leaf_font_size = 6)
+    plt.show()
+label : 
+    labels = fcluster(mergings, height, criterion = 'distance') : ระบุค่า height โดยเลือกจาก y axis บนกราฟ dendrogram ว่าต้องการ label cluster ที่ระดับไหน
+evaluate cluster attribute : 
+    samples['cluster'] = labels
+    sns.heatmap(samples.groupby('cluster').mean(), cmap = 'Blues/Oranges', linewidths = 1)
+
+
+
+
+-----------------------------------------------------------------DIMENSIONALITY REDUCTION TECHNIQUES-----------------------------------------------------------------------------------
+- exclude redundant features to reduce model overfitting 
+- use with only continuous variables 
+- can apply dimensionality reduction within a supervised learning pipeline by creating a new dataframe with transformed components as independent variables
+- must turn samples dataframe into numpy 2D arrays
+
+
+# VISUALIZATION TECHNIQUES FOR HIGH DIMENSIONAL DATA
+
+    # T-SNE or T-DISTRIBUTED STOCHASTIC NEIGHBOR EMBEDDING
+- x & y axis of tsne visualization can not be interpreted
+tsne = TSNE(learning_rate = 100) : learning rate should be between 50 and 200
+transformed = tsne.fit_transform(samples)
+xs = transformed[:, 0] : first dimension
+ys = transformed[:, 1] : second dimension
+plt.scatter(xs, ys, alpha = 0.5)
+for xs, ys, labels in zip(xs, ys, labels) : labels ที่ได้จาก clustering techniques
+    plt.annotate(labels, (xs, ys), fontsize = 5, alpha = 0.75)
+plt.show() 
+
+
+    # DIMENSIONALITY REDUCTION
+pca = PCA(n_components = n) : n features ที่มี variance สูงสุด จะ retain เอาไว้โดยไม่ exclude , โดยปกติ n จะระบุเป็น 2 เพื่อให้ visualization ได้
+pca.fit(samples)
+transformed = pca.transform(samples) 
+xs = transformed[:, 0]
+ys = transformed[:, 1]
+find variance or eigenvalues : 
+    - prioritize the most significant components that explain the most variance in the data
+    components = range(len(pca.components_))
+    plt.bar(components , pca.explained_variance_) # ทีนี้เราก็จะเห็นว่า components ไหนที่มี variance เยอะกว่าอันอื่น ซึ่งก็จะเป็น most significant components or "intrinsic dimension" และ จะถือว่า lower variance features เป็น noise
+    plt.xticks(components)
+    plt.xlabel('pca components')
+    plt.ylabel('variance')
+    plt.show()
+visualize :
+    - select two most significant higher variance components
+    plt.scatter(xs, ys, c = samples['cluster'], alpha = 0.5)
+    mean = pca.mean_ : ค่าเฉลี่ยของแต่ละ features
+    first_pc = pca.components_[0, :] : show coefficients or eigenvector of each feature ในการสร้าง first component โดยจะเป็น numpy 2D arrays [[, ], [, ]] มีจำนวน rows ตามจำนวน components และ จำนวน columns ตาม features
+    second_pc = pca.components_[1, :] : show coefficients or eigenvector of each feature ในการสร้าง second component
+    plt.arrow(mean[0], mean[1], first_pc[0], first_pc[1], color = 'red', width = 0.01) 
+    plt.arrow(mean[0], mean[1], second_pc[0], second_pc[1], color = 'red', width = 0.01)
+    plt.axis('equal')
+    plt.title('principle (first two) components of first two features of sample. (red arrows)')
+    plt.xlabel('first Component')
+    plt.ylabel('second Component')
+    plt.show()
+
+
+    # NON-NEGATIVE MATRIX FACTORIZATION
+- require sample features be non-negative or >= 0 
+- may be use minmax scaler to scale continuous variables in samples to to ensure they have non-negative values
+- example of appropiated dataset : word frequency
+- factorized matrix โดย samples =  nmf_features * nmf.components_ 
+    examples : samples = 3 * 4 matrix
+    n components = 2
+    0 0 0 0   0 0   0 0 0 0
+    0 0 0 0 = 0 0 * 0 0 0 0
+    0 0 0 0   0 0
+nmf = NMF(n_components = 2) 
+nmf.fit(samples) 
+nmf_features = nmf.transform(samples)
+visualize : 
+    plt.scatter(nmf_features[:, 0], nmf_features[:, 1])
+    plt.xlabel("first component")
+    plt.ylabel("second component")
+    plt.title("dimensionality reduction using nnmf")
+    plt.show()
+recommendation system : 
+    nmf_features = pd.DataFrame(norm_features, index = titles) : titles คือ index ของ samples dataframe ในตอนแรก
+    current_title = nmf_features.loc['title name'] : เลือก title ที่ต้องการ
+    similarities = norm_features.dot(current_title) : norm_features * current_article
+    print(similarities.nlargest()) : find the title with the highest cosine similarity หรือ title ที่มีคุณสมบัติใกล้เคียงกับ current title ที่สุด
+
+
+# APPLY WITH SUPERVISED LEARNING
+pipeline = Pipeline([
+                    ('scaler', MinMaxScaler(feature_range = (0, 1))),  
+                    ('reducer', NMF(n_components=2)),  
+                    ('classifier', ensembles())
+                    ])
+pipe.fit(X_train, y_train)
+pipe.predict(X_test)
+pipe.score(X_test, y_test)
+
+
+
+
+-----------------------------------------------------------------------------DEEP LEARNING-----------------------------------------------------------------------------------------
+
+image pre-processing : 
+    - ปรับขนาดให้ทุกรูปมี pixel เท่ากัน แล้ว pixel ทั้งหมดของแต่ละรูป มาเรียงต่อกันเป็น row เดียว พร้อมระบุ color code แต่ละ pixel ซึ่งจะเป็นตัวแปรต้น พร้อมกับ class ของรูปภาพ ซึ่งเป็นตัวแปรตาม
+
+fit model : 
+    model = MLPRegressor(hidden_layer_size(number of nodes in first layer, number of nodes in second layer), activation = '', learning_rate_init = ) or MLPClassifier()
+        activation : activation function ['relu', 'tanh', 'logistic']
+        learning_rate_init = learning rate for regression [0.001, 0.01, 0.1], learning rate for classification [1, 5, 10]
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    model.score(y_test, y_pred)
+
+visualize cost function change :
+    plt.plot(model.loss_curve_) 

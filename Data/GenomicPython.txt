@@ -1,0 +1,262 @@
+------------------------------------------------------------------------   BASIC PYTHON--------------------------------------------------------------------------------------------------
+
+# INTRODUCTION
+    
+data types : string, integer, float, boolean : True or False
+
+    # BASIC STRING OPERATORS
+string[index] : sequence = 'atgccgtaccag', stop codon = sequence[-1:-4], reverse sequence = sequence[::-1]
+len(string) : length
++ : concatenate strings
+'' in string : true if first string exists inside second given string
+not '' in string : true if first string does not exist inside second given string
+string.split() : split the words into list, argument = 'the word used for split'
+' '.join([list of split words]) : joint the words in list into string with space character
+string.count('') : count how many '' characters it contains
+string.find('') : search the index where '' characters locate
+dna.find('atg', dna.find('atg) + 1) : second argument is index of string where to start
+
+
+    # NUMBER OPERATIONS
+* : multiplication
+/ : division
+// : floor division
+% : modulo
+
+    # INPUT 
+data = input('Enter a DNA sequence please :') : input string data type
+data = float(input('Enter a number please :')) : input float data type
+str(integer) : convert integer to string
+chr(integer) : convert integer to character
+
+
+
+# DATA STRUCTURES
+
+    # LIST
+list : [, , , ...] : ordered set of values
+list slicing : list[index], list[start index : stop index], list[start index : stop index : step]  : stop index be not included, list[:] : entire list
+list modification : list[index] = new value
+list concatenation : list + list
+lenght : len(list)
+delete value : del list[index]
+count value : list.count()
+sort : list.sort() : can sort letter characters a-z, in addition to number
+reverse elements : list.reverse()
+add an item to the top of list : list.append()
+remove an item from the top of list : list.pop(), element = list.pop() : show the item that was removed
+
+
+    # OTHERS
+tuple : (, , , ...)
+set : {, , , ...} : no duplicated elements
+    set | set : union
+    set & set : interception
+    set - set : difference
+dictionary : {'':, '':, '':, ...} : {keys:values}
+    dictionary[key] : access value 
+    dictionary[key] = new value : edit value 
+    dictionary[new key] = new value : add new key and new value
+    key in dictionary : true if the key exists inside the dictionary
+    del dictionary[key] : delete the key and its value
+    dictionary.keys() : list of keys
+    dictionary.values() : list of values
+    dictionary.items() : list of tuples(key, value)
+range : 
+    range(n) : integer list of 0 to n - 1
+    range(m, n) : integer list of m to n - 1
+    range(m, n, step) : [m : n-1 : step]
+
+
+# ALGORITHMS : all of these algorithms can work together including if-else conditions, while loop, for loop
+
+    # OPERATORS 
+comparison operators : these operators give boolean answer [True, False] and can compare both numerical and string values e.g. 'A' < 'C'
+    equal : == 
+    not equal : !=
+    less than : <
+    more than : > 
+    less than or equal to : <=
+    more than or equal to : >= 
+membership operartors :    
+    in : True if it finds the variable in the specified sequence
+    not in : True if it does not find the variable in the specified sequence
+indentity operators : 
+    is : True if data structure = data structure 
+    is not : False if data structure = data strucure
+logical operators :
+    and : True if both conditions are True
+    or : True if at least condition is True
+    not : True if condition is False
+
+
+    # CONDITIONS 
+alternative execution : if else
+    if variable operate compared variable :
+        command
+    else :
+        command
+multiple alternative execution : if elif else : 
+    if variable operate compared variable :
+        command
+    elif variable operate compared variable : 
+        command when if condition is False
+    else :
+        command when both if and elif conditions are False 
+pass : statement to do nothing or do not want any command to execute
+
+
+    # LOOPS 
+while loop : block of code to execute while condition is True
+    while variable operate variable : 
+        command
+for loop : iterates over the items of any sequence in an orderly way (list, tuple, string, or range)
+    for i in sequence : 
+        command
+    else : ใช้ในกรณีที่ iteration ใน for loop is failed เช่น ไม่พบตัวแปร
+        command 
+break : statement to terminate the loop
+continue : statement to continue the next iteration of the loop and skip the rest of code in the loop
+create new list :
+    new_list = [command(i) for i in old_list if condition(i)] or
+    new_list = []
+    for i in old_list :
+        if condition(i) :
+            new_list.append(command(i))
+
+    # FUNCTION
+functions are object : 
+    - สามารถใส่เข้าไปใน list, dict ได้ 
+    - สามารถถูกใส่เป็น argument ของ function ได้
+    - สามารถเป็น function ซ้อนใน function ได้ 
+    - สามารถถูก return กลับมาเป็นผลลัพธ์ของ function ได้
+syntax :
+    def function(input, default argument value = ) :
+        """hint"""
+        command
+        return output
+    function = function()
+call hint : help(function)
+
+
+---------------------------------------------------------------------------DNA SEQUENCING ALGORITHMS---------------------------------------------------------------------------------
+
+import genome sequence : !wget --no-check link
+
+def readgenome_fasta(filename) :
+
+    """ read fasta file and turn them to string or dna sequence """
+
+    genome = ''
+    with open(filename, 'r') as f :
+        for line in f :
+            if line[0] in ['A', 'T', 'C', 'G'] : 
+                genome += line.rstrip()
+    return genome
+genome = readgenome(filename)
+len(genome)
+
+
+
+
+def readgenome_fastq(filename) :
+
+    """ read fastq file and turn them to string or dna sequence """
+
+    sequences = []
+    qualities = []
+    with open (filename) as f :
+        while True :
+            f.readline() # skip the first line that is not dna sequence
+            seq = f.readline().rstrip()
+            f.readline() # skip the third line that is not dna sequence
+            qual = f.readline().rstrip()
+            if len(seq) == 0 :
+                break
+            sequences.append(seq)
+            qualities.append(quartile)
+    return sequences, qualities
+seqs, quals = readgenome_fastq(filename)
+print(seqs[:5]) : show first five genome sequences
+
+
+
+
+def countbase(genome) :
+
+    """count bases on dna sequence
+        args : genome (str)
+        return : common prefix string
+    """
+
+    counts = {'A':0, 'T':0, 'C':0, 'G':0}
+    for base in genome :
+        counts[base] += 1
+    return counts
+
+
+
+def longestcommonprefix(s1, s2) :
+
+    """find common prefix between two dna sequences
+        args : s1 (str), s2(str)
+        return : common prefix string
+    """
+
+    i = 0
+    while i < len(s1) and i < len(s2) and s1[i] == s2[i] :
+        i += 1
+    return s1[:i]
+
+
+
+def match(s1, s2) :
+
+    """ prove that two dna sequences are a match
+        args : s1 (str), s2(str)
+        return : boolean 
+    """
+
+    if len(s1) != len(s2) :
+        return False
+    for i in range(len(s1)) :
+        if s1[i] != s2[i] :
+            return False
+    return True
+
+
+def reversecomplement(s) :
+
+    """ reverse bases of dna sequence 
+        args : s (str)
+        return : revrese complement string
+    """
+
+    complement = {'A':'T', 'T':'A', 'C':'G', 'G':'C'}
+    reverse = ''
+    for base in s :
+        reverse = complement[base] + reverse
+    return reverse
+
+
+
+def naive(pattern, genome) : 
+
+    """this function is naive exact matching algorithm 
+       searching for positions of specific pattern within a larger genome sequence
+    """ 
+
+    positions = []
+    for i in range(len(genome) - len(pattern) + 1) : loop pattern over genome alignment
+        match = True
+        for j in range(len(pattern)) : 
+            if genome[i+j] != pattern[j] :
+                match = False
+                break
+        if match :
+            positions.append(i)
+    return positions 
+matches = naive(pattern, genome)
+print("this specific genome pattern found at positions :", matches)
+
+
