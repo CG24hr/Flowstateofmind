@@ -1,0 +1,642 @@
+-----------------------------------------------------------------------------Supervised learning------------------------------------------------------------------------------------------
+
+Model = function()
+
+Requirements : no missing values, numeric format, stored in pandas dataframe or numpy array
+    ดังนั้น จึงควรทำการ EDA และวิเคราะห์ทางสถิติ ก่อนเสมอ
+- Classification : target varaibles = categorical
+    # decision boundary : the surface separating different predicted classes
+    # linear classifier : a classier that learns "linear decision boundaries" e.g. logistic regression, SVM 
+        raw model output = coefficients * features + intercept
+            if positive : predict one class, if negative : predict the other class
+    # non-linear classifier : e.g. KNN, SVM
+- Regression : target variables = continuous
+
+
+
+
+
+
+feature = predictor variable = independent variable - explanatory variable
+target variable = dependent variable = response variable
+
+scikit-learn syntax :
+    from sklearn.module import Model
+    model = Model()
+    model.fit(X,y)
+    predictions = model.predict(X_new)
+
+
+# K-nearest Neighbors (KNN) classification
+    # classify unseen data ตามพื้นที่ที่มีจำนวนของ category ที่ใกล้เคียงมากที่สุด k จำนวน, 
+        # larger k = less complex model -> lead to underfitting (too simplex : low training accuracy)
+        # smaller k = more complex model -> lead to overfitting (more complex : training accuracy >>> testing accuracy), โดยทั่วไปจะอยู่ที่ 5-15
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split
+X = df[['continuous', 'continuous']].values
+y = df['category'].values
+print(X.shape, y.shape) 
+
+knn = KNeighborsClassifier(n_neighbors = k) : ระบุ k value ที่ต้องการ
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 123, stratify = y) 
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+
+
+
+# Logistic Regression : used for classification problems, outputs = probability of each binary class
+    # if p > 0.5 : the data is labeled 1, elif p < 0.5 : the data is labeled 0
+    # hyperparameter C : larger means less regularization, smaller means more regularization (discourages large coefficient values and encourages simpler models [reduces overfitting])
+        # more regularization : lower training accuracy, แต่ถ้า model overfitting ก็จะเพิ่ม accuracy
+        # default =  moderate regularization
+    # Lasso(L1), Ridge(L2) regression สามารถนำมาใช้สำหรับ coefficient regularization ได้ด้วยเช่นกัน 
+        # LogisticRegression(penalty = 'L1/L2')
+from sklearn.linear_model import LogisticRegression 
+logreg = LogisticRegression(C = 1.0)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 123)
+logreg.fit(X_train, y_train)
+y_pred = logreg.predict(X_test)
+y_pred_probs = logreg.predict_proba(X_test)[:, 1] : column 0 คือความน่าจะเป็นของ negative probablity, column 1 คือความน่าจะเป็นของ positive probablity
+
+    # Use with Cross-validation to find best hyperparameter and model performance
+    logreg = LogisticRegression(penalty = 'l1/l2')
+    logreg_cv = GridSearchCV(logreg, param_grid = {'C':[0.001, 0.01, 0.1, 1, 10]}, cv = KFold(n_splits = 5, shuffle = True, random_state = 123))
+    logreg_cv.fit(X_train, y_train)
+    print(logreg_cv.best_params_)
+
+
+    # Multi-class logistic regression : 
+        # One Vs. Rest : breaking the model down into several binary classification problems. (y == 0 vs y ==1, y == 0 vs y ==2, y == 1 vs y == 2)
+        # Multimomial : considers all classes together as a single problem. predict the probabilities of instances belonging to all classes.
+    logreg = LogisticRegression(multi_class = 'ovr/multinomial') : default คือ 'auto' ซึ่งจะเลือกอัตโนมัติระหว่าง ovr/multinomial based on dataset
+    y_pred = logreg.predict(X_test)
+
+
+
+
+# Support Vector Machines : ใน sklearn จะมีหลาย module แต่ที่นิยมคือ SVC (Support vector classifier)
+    # find the optimal hyperplane that best separates data points from different classes while maximizing the margin between classes
+    # Support Vectors: These are the data points that lie closest to the hyperplane and have the largest influence on its position. They essentially "support" the hyperplane.
+    # Margin: The margin is the perpendicular distance(ระยะตั้งฉาก) between the hyperplane and the nearest support vectors. Maximizing the margin helps improve the generalization ability of the model.
+    # 'C' hyperparameter :  controls the trade-off between maximizing the margin and minimizing the classification error.
+        # smaller value of C allows for a larger margin but may lead to some misclassified points
+        # larger value of C focuses more on correctly classifying the points.
+    # kernel = 'linear' : SVMs can handle both linearly separable and non-linearly separable
+        # if non-linear : kernel = 'rbf'(Radial basis function) , hyperparameter gamma = 1.0 , lower gamma -> smooth boundaries, larger gamma lead to more complex and overfitting
+from sklearn.svm import SVC
+svc = SVC(probability = True) 
+svc.fit(X_train, y_train)
+parameters = {'kernel':['linear', 'rbf'], 'C':[0.1, 1.0, 10], 'gamma':np.linspace(0.00001, 10, num = 7)}
+svc_cv = GridSearchCV(svc, param_grid = parameters, cv = KFold(n_splits = 5, shuffle = True, random_state = 123))
+svc_cv.fit(X_train, y_train)
+print("Best CV params", svc_cv.best_params_)
+print("Best CV accuracy", svc_cv.best_score_)
+# Report the test accuracy using these best parameters
+print("Test accuracy of best grid search hyperparameters:", svc_cv.score(X_test, y_test))
+
+
+
+    # Measuring model performance
+        # accuracy : correct predictions / total observations = (TP+TN) / (TP+TN+FP+FN)
+        from sklearn.model_selection import train_test_split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 123, stratify = y) 
+            commonly use test size approximately 20-30 %
+            stratify = y หมายถึงสัดส่วนของ labeled category ใน y_train & y_test จะเท่ากับสัดส่วนของ y 
+                เช่น สมมติ y มีสัดส่วนของ Disease = 10 %, สัดส่วนของ Disease ใน y_train & y_test ก็จะเท่ากับ 10 % ทั้งคู่
+        knn = KNeighborsClassifier(n_neighbors = k)
+        knn.fit(X_train, y_train)
+        print(knn.score(X_test, y_test)) : Check accuracy
+        # confusion matrix : rows = actual, columns = predicted --> [[TN, FP], [FN, TP]]
+            # precision (or positive predictive value) = TP / TP + FP 
+            # recall (or sensitivity) = TP / TP + FN
+            # F1 score = 2 * (precision * recall) / (precision + recall)
+        from sklearn.metrics import confusion_matrix, classification_report
+        confusion_matrix(y_test, y_pred)
+        classification_report(y_test, y_pred)
+        # ROC curve : หา area under ROC curve (AUC) ยิ่งใกล้เคียง 1 ยิ่งดี 
+        from sklearn.metrics import roc_curve, roc_auc_score
+        fpr, tpr, thresholds = roc_curve(y_test, y_pred_probs)
+        plt.plot([0, 1], [0, 1], 'k--')
+        plt.plot(fpr, tpr)
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC Curve for Diabetes Prediction')
+        plt.show()
+        roc_auc_score(y_test, y_pred_probs)
+
+
+
+# Linear Regression 
+    # target variable should be continuous variable
+    # simple -> y = ax + b : y  = target variable, x = feature, a = slope coefficient, b = intercept coefficient
+    # multiple -> y = a1x1 + a2x2 + ... + anxn + b
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+
+X = df.drop('target_variable', axis = 1).values
+y = df['target_variable'].values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 123)
+reg = LinearRegression()
+reg.fit(X_train, y_train)
+y_pred = reg.predict(X_test)
+
+   
+    # Regularized regression (ใช้ควบคุม overfitting): y = a1x1 + a2x2 + ... + anxn + b ถ้ามี coeffients ที่เป็น large positive หรือ large negative ก็จะทำให้เกิด overfitting(model bias), จึงต้องมี regulation เพื่อชดเชยน้ำหนัก หรือลดความซับซ้อนของโมเดลลง
+        # โดยใช้ alpha parameter --> เหมือน k parameter ใน KNN, alpha ยิ่งมากยิ่งชดเชยน้ำหนัก coefficient มาก, แต่ถ้ามากไป underfitting แต่ถ้าน้อยไป overfitting
+        # Ridge regression : จะชดเชยโดยยังคง features ทั้งหมดเอาไว้
+        # Lasso regression : มีแนวโน้มที่จะชดเชย โดยตัด features ที่ไม่สำคัญออกไปเลย
+            # ใช้ for loop หาค่า alpha ที่จะทำให้ได้ r-squared ที่ดีที่สุด
+            from sklearn.linear_model import Ridge# or Lasso
+            scores = []
+            for alpha in [0.1, 1.0, 10.0, 100.0, 1000.0] :
+                ridge = Ridge(alpha = alpha) # or lasso = Lasso(alpha = alpha)
+                ridge.fit(X_train, y_train)
+                ridge_pred = ridge.predict(X_test)
+                scores.append(ridge.score(X_test, Y_test))
+            print(scores) : ดูว่า alpha parameter เท่าไหร่ ให้ค่า R-squared สูงสุด จากนั้นมาสร้าง model ใหม่อีกรอบ ด้วยค่า alpha ที่เหมาะสม
+            # แสดง coefficients ที่เกิดจาก Regularized regression
+            ridge = Ridge(alpha = selected_alpha)
+            ridge.fit(X, y)
+            ridge_coef = ridge.fit(X, y).coef_
+            print(df.drop('target_variable', axis = 1).columns, ridge_coef)
+            
+           
+
+    # R-squared : บ่งบอกประสิทธิภาพในการทำนายผล มีค่าระหว่าง 0-1 ยิ่งเข้าใกล้ 1 แปลว่าดีมาก
+        reg.score(X_test, y_test)
+    # loss funtion (error function) : for building linear regression model, we aim to minimize loss function.
+        # OLS (ordinary least squares) model -> aim to minimize residual sum of squares (RSS)  
+            # mean square error (MSE) คือค่าเฉลี่ยของ RSS, ส่วน root mean squared error (RMSE) คือ sqrt(MSE)
+            from sklearn.metrics import mean_squared_error
+            rmse = mean_squared_error(y_test, y_pred, squared = False) : squared = False หมายถึง root mean squared error, ถ้า True หมายถึง mean squared error
+
+
+
+
+# Cross-validation : โดยปกติค่า R-squared หรือ accuracy นั้นส่วนหนึ่งขึ้นอยู่กับการ split data เป็น train & test set
+    # เป็นการแบ่งข้อมูลออกเป็น k ส่วน โดยสลับกันเก็บหนึ่งส่วนไว้สำหรับสร้าง model ส่วน ส่วนที่เหลือสลับกันวนมาทดสอบประสิทธิภาพโมเดล ทำแบบนี้ k ครั้ง --> มีความน่าเชื่อถือกว่าวิธี split data***
+from sklearn.model_selection import cross_val_score, KFold
+kf = KFold(n_splits = 5, shuffle = True, random_state = 123) : 5 folds cross validation, shuffle dataset before splitting into folds
+reg = LinearRegression()
+cv_results = cross_val_score(reg, X_train, y_train, cv = kf)
+print(cv_results) : แสดง R-squared ที่เกิดขึ้นในการ splits ทั้งหมด 5 ครั้ง # โดยปกติจะแสดง default parameter ขึ้นอยู่กับ model ที่เรา input ไป เช่นหากเป็น LogisticRegression ก็จะแสดง accuracy 
+np.mean(cv_results), np.std(cv_results)
+np.quantile(cv_results, [0.025, 0.975]) : 95% CI ของ R-squared cross validation
+
+    # Hyperparameter tuning : หาค่า alpha (or other hyperparameters e.g. n_neighbors) ที่เหมาะสม จากการ cross-validation ทั้งหมด k ครั้ง
+    from sklearn.model_selection import GridSearchCV
+    params = {'alpha':np.linspace(0.00001, 1, 20)} # ตรงนี้สามารถปรับได้ ขึ้นอยู่กับจะใช้ hyperparameter ของ model ไหน ในที่นี้ยกตัวอย่าง Ridge regression
+    ridge_cv = GridSearchCV(ridge, params, cv = kf) 
+        # หากเป็น KNN classifier
+        params = {'n_neighbors':np.arange(1, 21)} 
+        knn_cv = GridSearchCV(knn, param_grid = params, cv = kf) 
+    ridge_cv.fit(X_train, y_train)
+    print("Tuned ridge paramaters: {}".format(ridge_cv.best_params_)) : แสดง alpha และ R-squared ที่ดีที่สุด
+    print("Tuned ridge score: {}".format(ridge_cv.best_score_))
+
+
+
+
+
+# Pre-processing data
+# for categorical variables -> convert into numeric value
+import pandas as pd
+categories_dummies = pd.get_dummies(df['category_column'], drop_first = True) : drop_first คือ drop dummy นึงไป เพราะตอนสร้าง model มันไม่ให้ใส่ครบทุก dummies เพราะที่ดรอปไปคือ baseline เปรียบเทียบ
+print(categories_dummies.head())
+
+df_dummies = pd.concat([df, categories_dummies], axis = 1)
+df_dummies = df_dummies.drop('category_column', axis = 1) # อย่าลืม remove original categorical column เดิม !!!
+
+
+
+# Handling Missing data
+df.isna().sum().sort_values()
+df = df.dropna(subset = ['', '', ...]) : เลือก columns ที่มี null values มา drop ทิ้งทั้ง rows
+df['target_variable'] = np.where(df['target_variable'] == 'category', 1, 0) : เปลี่ยน target variable ที่เป็น category ที่เราสนใจให้เป็น 1 ส่วน categories อื่นใน column เดียวกันเป็น 0
+    # imputing value : if values are numerical -> commonly use the mean (แต่อาจจะใช้ median ได้), หากเป็น categorical value มักใช้ mode
+    from sklearn.impute import SimpleImputer() # impute and replace missing values with appropriate values
+    impute = SimpleImputer()
+    X_train_impute = impute.fit_transform(X_train)
+    X_test_impute = impute.transform(X_test)
+
+    # use with Pipeline
+    from sklearn.pipeline import Pipeline()
+    steps = [('impute', SimpleImputer()), ('knn', KNeighborsClassifier(n_neighbors = k))]
+    pipeline = Pipeline(steps)
+
+    X = df.drop('target_variable', axis = 1).values
+    Y = df['target_variable']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 123)
+    pipeline.fit(X_train, y_train) # pipeline จะทำงานตาม stepes คือ impute ก่อน แล้วตามด้วย fit model ที่เราเลือก
+    pipeline.score(X_test, y_test) # อันนี้ pipeline ก็จะ impute missing values ใน X_test ด้วยเช่นกัน
+
+
+# Centering and Scaling (aka Normalization)
+    # ข้อมูลดิบที่เราได้รับมานั้นมีความหลากหลาย ทั้งชนิดข้อมูล รูปแบบข้อมูล และ Scale ช่วงของข้อมูล (ข้อมูลตัวเลข Cardinal) เช่น ข้อมูลเด็กมัธยม มี 3 Feature คือ อายุ [10, 20], น้ำหนัก [30, 200] ส่วนสูง [120, 180]
+    # สำหรับอัลกอริทึม Machine Learning หลาย ๆ ตัว ไม่สามารถรับข้อมูลหลากหลาย Scale แบบนี้ได้โดยตรง จำเป็นที่เราต้องทำ Normalization ก่อนที่เราจะป้อนข้อมูลให้กับโมเดล อัลกอริทึมถึงจะสามารถทำงานได้
+    # ยกตัวอย่างเช่น Mean Squared Error ถ้าค่ายิ่งแตกต่างกันมาก Loss ก็จะยิ่งมากเป็นทวีคูณ เนื่องจากยกกำลังสอง ทำให้ Feature น้ำหนัก ที่จำนวนใหญ่กว่า ช่วงใหญ่กว้างกว่า จะบดบัง Feature อื่น ๆ ไปหมด 
+    # แต่ถ้าเรา ​Normalize ทุก Feature ให้ mean = 0, variance = 1 เท่ากันหมด ก็จะแก้ปัญหานี้ได้ : x_scaled = (x - xmean) / variance
+    # ใช้กับ KNN classifier, Logistic regression, Linear regression, Artificial neural network
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler() 
+X_train_scaled = scaler.fit_transform(X_train) # หากจะ transform ให้กลับมาเป็นค่าเดิมก็ scaler.inverse_transform(X_train_scaled)
+X_test_scaled = scaler.transform(X_test)
+
+# use with Pipeline
+steps = [("scaler", StandardScaler()), 
+         ("logreg", LogisticRegression())] : StandardScaler สามารถใช้ได้ทุก model , assign each step "name" อะไรก็ได้
+
+pipeline = Pipeline(steps)
+pipeline.fit(X_train, y_train)
+print(pipeline.score(X_test, y_test)) : โดยส่วนมากจะพบว่า model จะมี performance ที่ดีขึ้น, โดยในขั้นตอนนี้ ใน pipeline ก็จะมีการ scaling X_test ให้ด้วย
+
+    # ใช้ร่วมกับ cross-validation
+    kf = KFold(n_splits = 5, shuffle = True, random_state = 123)
+    params = {'logreg__C' : np.linspace(0.001, 1, 20)}
+    cv = GridSearchCV(pipeline, param_grid = params, cv = kf)
+    cv.fit(X_train, y_train)
+    print(cv.best_score_, cv.best_params_)
+
+
+
+# Evaluate multiple model performance
+
+models = {'LinearRegression':LinearRegression(), 'Ridge':Ridge(alpha = 0.1), 'Lasso':Lasso(alpha = 0.1)}
+results = []
+for model in models.values() :
+    kf = KFold(n_splits = 5, shuffle = True, random_state = 123)
+    cv = cross_val_score(model, X_train, y_train, cv = kf)
+    results.append(cv)
+plt.boxplot(results, labels = models.keys()) # ดูค่า median เทียบแต่ละ model
+plt.show()
+
+for name, model in models.items() :
+    model.fit(X_train_scaled, y_train)
+    y_pred = model.predict(X_test_scaled)
+    test_rmse = mean_squared_error(y_test, y_pred, squared = False)
+    print('{} test set RMSE : {}'.format(name, test_rmse))
+
+
+
+
+----------------------------------------------------------------------Tree-Based Model--------------------------------------------------------------------------
+
+# Classification tree : 
+    # Able to capture non-linear relationships between features and labels
+    # Don't require feature scaling(e.g. Standardization)
+    
+    # Decision-Tree :
+        # data structure consisting of a hierarchy of nodes(each node = question or prediction)
+        # Three kinds of nodes :
+            # Root : no parent node, question giving rise to two children nodes
+            # Internal : one parent node, question giving rise to two children nodes
+            # Leaf : one parent node, no children nodes --> prediction
+        # max_depth : maximum number of levels in the tree : prevent the tree from becoming too deep and overfitting the training data
+        # max_features : number of features to consider when looking for the best split [0.2, 0.4, 0.6, 0.8]
+        # min_samples_leaf : the minimum number of samples required to be at a leaf node, 0.1 = 10% of training data
+        # criterion : ['gini', 'entropy']
+    from sklearn.tree import DecisionTreeClassifier
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import accuracy_score
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, test_size = 0.3, random_state = 123)
+    dt = DecisionTreeClassifier(max_depth = 2, random_state = 123)
+    dt.fit(X_train, y_train)
+    y_pred = dt.predict(X_test)
+    accuracy_score(y_test, y_pred)
+
+
+# Regression tree :
+    # target variable in continuous
+    # ***can solve non-linear relationship*** that linear regression can't 
+    # Don't require feature scaling(e.g. Standardization)
+    from sklearn.tree import DecisionTreeRegressor
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import mean_squared_error as MSE
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, test_size = 0.3, random_state = 123)
+    dt = DecisionTreeRegressor(max_depth = 4, min_samples_leaf = 0.1, random_state = 123)
+    dt.fit(X_train, y_train)
+    y_pred = dt.predict(X_test)
+    MSE(y_test, y_pred, squared = True) : squared = False, if root mean squared error
+
+
+
+    # Generalization error : Does the function() generalize well on unseen data ? 
+        # cross_validation error = sum of cross-validation error / number of cross-validation , โดย error ในที่นี้คือ mean_squared_error 
+        # Diagnose high variance problem : หา root mean squared error -> cross-validation error > training set error
+        # Diagnose high bias problem : หา root mean squared error -> cross-validation error == training set error แต่ทั้งคู่ > baseline RMSE 
+            # หา cross-validation error
+            from sklearn.tree import DecisionTreeRegressor
+            from sklearn.model_selection import train_test_split, cross_val_score
+            from sklearn.metrics import mean_squared_error as MSE
+        
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=SEED)
+            dt = DecisionTreeRegressor(max_depth=4, min_samples_leaf=0.26, random_state=SEED)
+            df.fit(X_train, y_train)
+            MSE_CV_scores = - cross_val_score(dt, X_train, y_train, cv = 10, scoring = 'neg_mean_squared_error', n_jobs = -1)
+            MSC_CV_mean = MSE_CV.mean()
+            RMSE_CV = MSC_CV_mean ** (1/2) # ได้ cross-validation error
+            print('Root mean squared error of cross-validation : {}'.format(RMSE_CV))
+            
+            # หา training set error
+            y_pred_train = dt.predict(X_train)
+            MSE_train = MSE(y_train, y_pred_train)
+            RMSE_train = MSE_train ** (1/2) # ได้ training set error
+            print('Root mean squared error of training set : {}'.format(RMSE_train))
+            
+            # หา baseline error 
+            y_pred = dt.predict(X_test)
+            MSE = MSE(y_test, y_pred)
+            RMSE = MSE ** (1/2) 
+            print('Root mean squared error of baseline dataset : {}'.format(RMSE))
+            
+
+
+# Ensemble learning : train different models on the same dataset, let each model make its predictions
+    # meta-model : aggregates predictions of individual models.
+    # final prediction : more robust and less prone to errors.
+    # best results : models are skillful in different ways, because they compensate each other.
+    # *****แนะนำว่ามาทำหลังทำ GridsearchCV ซึ่งได้ best parameters ของแต่ละ model ไปแล้วจะดีมากๆ แล้วค่อยเอามารวมกันเป็น ensemble model*****
+
+    # Voting Classifier : same training set, but different algorithms**
+    from sklearn.ensemble import VotingClassifier
+
+    lr = LogisticRegression()
+    knn = KNeighborsClassifier()
+    dt = DecisionTreeClassifier()
+
+    classifiers = [('LogisticRegression', lr),
+              ('KNeighborsClassifier', knn), 
+              ('DecisionTreeClassifier', dt)]
+    for name, model in classifiers : 
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        print('{} accuracy score : {}'.format(name, accuracy_score(y_test, y_pred)))
+
+        # then compare with ensemble model that aggregates each model in classifiers tuples
+        vc = VotingClassifier(estimators = classifiers)
+        vc.fit(X_train, y_train)
+        y_pred = vc.predict(X_test)
+        print('Voting Classifier accuracy score : {}'.format(accuracy_score(y_test, y_pred)))
+
+
+    # Bagging (boostrap aggregation) : same algorithm, but different subsets of dataset**
+        # สุ่มข้อมูลแบบแทนที่ มาจากชุดข้อมูลเรา หลายๆกลุ่ม (นึกภาพ boostrap distribution ที่ใช้หา point estimate กับ confidential interval) เพื่อมาสร้าง classifier หลายๆชุด 
+        # Random forest tree ที่สุ่มข้อมูลมามาจาก dataset หลายๆชุด แต่ละชุดเอามาสร้าง decision tree ของตัวเอง แล้วจากนั้นนำทุก decision tree มาทำนายชุดข้อมูลใหม่ที่เจอ
+            # เนื่องจากหากใช้แค่ decision tree โมเดลเดียว โอกาสเกิด overfitting จะสูงมาก 
+        # BaggingClassifier, BaggingRegressor in sklearn
+        from sklearn.tree import DecisionTreeClassifier
+        from sklearn.ensemble import BaggingClassifier
+        dt = DecisionTreeClassifier(max_depth = 4, min_samples_leaf = 0.16, random_state = 123)
+        bc = BaggingClassifier(base_estimator = dt, n_estimators = 50, random_state = 123) # n_estimators = จำนวนชุดข้อมูลที่จะสุ่มออกมาสร้างแต่ละ model (same algorithm as base_estimator)
+        bc.fit(X_train, y_train)
+        y_pred = bc.predict(X_test)
+        print('Bagging Classifier accuracy score : {}'.format(accuracy_score(y_test, y_pred)))
+
+        # Random forest : หลักการเดียวกับ Bagging แต่ base estimator คือ decision tree โดยมีทั้ง decision tree classifier & regressor 
+        from sklearn.ensemble import RandomForestClassifier / RandomForestRegressor
+        rf = RandomForestRegressor(n_estimators = 400, min_samples_leaf = 0.12, random_state = 123)
+        rf.fit(X_train, y_train)
+        y_pred = rd.predict(X_test)
+        rmse_test = MSE(y_test, y_pred) ** (1/2)
+        print('Test set RMSE of random forest regressor :', rmse_test)
+
+
+    # ฺBoosting : Ensemble method combining several weak learners to form a stronger learner
+        # train predictor models sequentially, and each predictor try to correct its predecessor(predictor ตัวก่อนหน้า)
+        # Adaboost (Adaptive Boosting) : มีทั้ง AdaBoostClassifier, AdaBoostRegressor
+        from sklearn.ensemble import AdaBoostClassifier
+        dt = DecisionTreeClassifier(max_depth = n, random_state = 123)
+        ada_clf = AdaBoostClassifier(base_estimator = dt, n_estimators = 100)
+        ada_clf.fit(X_train, y_train)
+        y_pred_probs = ada_clf.predict_proba(X_test)[:, 1]
+        roc_auc_score = roc_auc_score(y_test, y_pred_probs)
+        # Gradientboost : GradientBoostingClassifier, GradientBoostingRegressor : ต่างจาก Adaboost ตรงไม่ต้องมี base_estimator เพราะจะใช้เป็น simple decision tree อยู่แล้ว
+        from sklearn.ensemble import GradientBoostingRegressor
+        gbt_reg = GradientBoostingRegressor(n_estimators = 300, max_depth = 1, random_state = 123)
+            # ถ้าจะทำ Stochastic Gradient Boosting : ก็ set parameters อีกสองอัน คือ subsample = 0.8 (default = 1.0 ก็จะเป็น gradient boosting ธรรมดา), max_features = 0.2 หรือปรับตามต้องการ
+        gbt_reg.fit(X_train,y_train)
+        y_pred = gbt_reg.predict(X_test)
+        rmse = MSE(y_test, y_pred) ** (1/2) 
+
+
+
+
+# My Techniques for Supervised learning 
+1. Gridsearch cross validation สำหรับหา best parameters สำหรับแต่ละ model ก่อน 
+    model.get_params() เพื่อดู hyperparameters ของแต่ละ models
+    # เพิ่มเติม สำหรับ classifier model นั้น สามารถเปลี่ยน default score จาก accuracy เป็น scoring = 'roc_auc' เพื่อเปลี่ยนจากหา model ที่ accuracy ดีที่สุดเป็น model ที่มี roc_auc_score เยอะที่สุด
+    # เพิ่มเติม จาก model_cv.best_params_ & model_cv.best_score_
+    best_model = model_cv.best_estimator_ # สร้าง model ที่มี best parameters, ถ้าเป็น classifier -> score จะเป็น accuracy, ถ้าเป็น regressor -> score จะเป็น R squared
+    best_model_accuracy = model_cv.score(X_test, y_test)
+        # Example of interpretion
+        best_model = model_best.best_estimator_
+        print('Best model parameters :', model_cv.best_params_)
+        print('Best model cross validation score :', model_cv.best_score_) # หาก cross validation score >> testset score แปลว่า model นั้น overfitting
+        print('Best model test set score :', model_best.score(X_test, y_test)) 
+
+2. สร้าง ensemble models ซี่งประกอบด้วย # ซึ่ง model ต่างๆเหล่านี้ก็สามารถใช้ GridSearchCV เพื่อใส่แต่ละ best_model ที่เราได้ในขั้นตอนแรกลงใน param_grid เพื่อหา best_ensemble ที่มีประสิทธิภาพดีที่สุดได้
+- Voting Classifier ซึ่งก็คือการนำ different algorithm มา predict แล้ว vote คำตอบเอา, ดังนั้นจึงเอา model with best parameters ที่เราหาได้ มาสร้าง Voting classifier
+
+- Bagging classifier ซึ่งก็คือ different boostrap dataset with same algorithm, ดังนั้นในที่นี้เลยเลือก Logistic regression ซึ่งตอนทำ gridsearch พบว่ามี accuracy สูงสุด ร่วมกับ best parameters ที่หาได้ มาสร้าง bagging classifier model
+
+- Random Forest model : เอา decision tree with best parameters ที่หาได้ตอนทำ gridsearchCV มาสร้าง model
+
+- Adaboost, GradientBoost
+3. นำ ensemble models ทั้งสามข้างต้นมา evaluate model performance ในขั้นสุดท้าย ด้วยการเปรียบเทียบ score จาก cross_val_score
+
+
+
+----------------------------------------------------------------------Unsupervised Learning-------------------------------------------------------------------------------------------------
+
+# k-mean clustering : number of cluster must be specified
+    # model จะจำค่าเฉลี่ยของแต่ละ cluster ('centroids') เพื่อใช้ในการทำนาย new sample ใหม่ที่ใส่เข้ามาว่าควรอยู่ใน cluster ไหน โดยเลือก cluster ที่มีตำแหน่ง centroid ใกล้กับ sample ใหม่ที่สุด
+from sklearn.cluster import KMeans
+model  = KMeans(n_clusters = n)
+model.fit(samples) : samples เป็น numpy 2D array 
+labels = model.predict(samples) : labels แต่ละ cluster of classification
+
+
+x = new_samples[:, 0]  # ถ้าไม่มี test set samples ก็เอา samples เดิม แต่เลือก feature มา 2 dimensions
+y = new_samples[:, 1]
+plt.scatter(x, y, c = labels, alpha = 0.5, cmap = 'viridis') # visualize การจัดกลุ่มระหว่าง feature 1 & 2
+
+centroids = model.cluster_centers_ # แสดงผล centroids ของแต่ละ cluster 
+centroids_x = centroids[:, 0]       
+centroids_y = centroids[:, 1]
+plt.scatter(centroids_x, centroids_y, marker = 'D', s = 50)
+plt.show()
+
+    # Evaluate clustering : intertia จะวัดว่าแต่ละ sample ห่างจาก centroid ของมันประมาณเท่าใด โดยยิ่ง inertia น้อยๆยิ่่งแปลว่า good clustering
+        # แต่โดยปกติแล้ว Kmeans model จะเลือกวิธี clustering เพื่อให้ มี inertia ต่ำที่สุดอยู่แล้ว (tight cluster หรือกระจุกแน่น ก็ยิ่ง low inertia) 
+            # โดยขึ้นอยู่กับ n_clusters เป็นหลัก เมื่อ n_clusters เพิ่มถึงจุดนึง inertia จะไม่ค่อยลดลง
+    print(model.inertia_)
+            # find most appropiate number of clustering
+            ks = np.arange(1, 6)
+            inertias = []
+            for k in ks :
+                model = KMeans(n_clusters = k)
+                model.fit(samples)
+                inertias.append(model.inertia_)
+            plt.plot(ks, inertias, '-o')
+            plt.xlabel('Number of clusters(k)')
+            plt.ylabel('Inertia')
+            plt.xticks(ks)
+            plt.show()
+
+
+        # หากมี dataset ที่มี original labels มาแต่แรกแล้ว (eg. iris dataset) ก็เอา label ที่เราได้ มาเปรียบเทียบกับ original label เดิม
+        species = dataset['species'].values
+        df = pd.DataFrame({'labels':labels, 'species':species})
+        cross_tab = pd.crosstab(df['labels'], df['species'])
+        print(cross_tab) 
+
+        # หากไม่มี ก็เปรียบเทียบคุณสมบัติของแต่ละ cluster ที่ model เราจำแนกได้ : สามารถใช้วิธีนี้กับ unsupervised learning model อื่นๆ เพื่อเปรียบเทียบคุณสมบัติแต่ละกลุ่มที่โมเดลจัดมา
+        samples['cluster'] = labels
+        sns.heatmap(samples.groupby('cluster').mean(), cmap = 'Blues/Oranges', linewidths = 1)
+
+
+    # Standardization : เนื่องจากบาง features อาจจะมีความแปรปรวนที่สูงกว่า features อื่นๆ ซึ่งจะมีผลต่อการ clustering เราจึงต้องเปลี่ยนข้อมูลแต่ละ features ให้มี mean = 0 & variance = 1 เพื่อ improve clustering
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.pipeline import make_pipeline
+    scaler = StandardScaler()
+    kmeans = KMeans(n_clusters = n)
+    pipeline = make_pipeline(scaler, kmeans) : เหมือนกับ Pipeline(steps)
+    pipeline.fit(samples)
+    labels = pipeline.predict(samples)
+
+
+
+# Hierarchical Clustering 
+    # height on dendrogram (y-axis) shows distance between each cluster
+from scipy.cluster.hierarchy import linkage, dendrogram
+samples = df.drop('target_variable', axis = 1).values
+mergings = linkage(samples, method = 'complete') 
+     method = 'complete' หมายถึง distance between cluster is the max distance between their samples
+     method = 'single' หมายถึง distance between cluster is the closest distance between their samples
+dendrogram(mergings, labels = countries, leaf_rotation = 90, leaf_font_size = 6)
+plt.show()
+    # extract labels from clustering
+from scipy.cluster.hierarchy import fcluster 
+labels = fcluster(mergings, 15, criterion = 'distance') : ระบุค่า height โดยเลือกจากกราฟ dendrogram ว่าต้องการ label cluster ที่ระดับไหน
+print(labels)
+    # เอา label ที่เราได้ มาเปรียบเทียบกับ original label เดิม
+df = pd.DataFrame({'labels':labels, 'countries':countries})
+print(pd.crosstab(df['labels'], df['countries']))
+    
+
+
+
+
+
+# Dimensionality Reduction : สามารถใช้ในกรณีที่มี features จำนวนมาก (กรณีที่ data อยู่ในรูป structural data แล้ว) เพื่อคัดเฉพาะ features ที่สำคัญ เพื่อลด overfitting ของ model
+***ไม่ควรใช้กับ categorical variable -> ควร drop ออกก่อน แล้วค่อยมา concatenate หลัง reduce dimension แล้ว
+    # t-SNE :  (t-distributed Stochastic Neighbor Embedding) is an unsupervised ***non-linear*** dimensionality reduction technique for data exploration and visualizing high-dimensional data.
+        # t-SNE gives you a feel and intuition on how data is arranged in higher dimensions. 
+        # It is often used to visualize complex datasets into two and three dimensions, allowing us to understand more about underlying patterns and relationships in the data.
+    from sklearn.manifold import TSNE
+    model = TSNE(learning_rate = 100) : learning_rate ควรมีค่าระหว่าง 50-200
+    transformed = model.fit_transform(samples) : TSNE ไม่มีแยก .fit() & .transform() method # samples เป็น numpy 2D array ที่มีหลาย dimension (หรือ > 2 features) โดยตัด target column ทิ้งไปก่อนแล้ว
+    xs = transformed[:, 0] # TSNE.fit_transform(samples) จะเข้าสูตรคณิตศาสตร์หลายๆขั้นตอน จนย่อมาให้เหลือ 2 Dimension เพื่อง่ายต่อการ visualize ให้เข้าใจ
+    ys = transformed[:, 1]
+    plt.scatter(xs, ys, alpha = 0.5)
+        # label แต่ละ cluster บน plot : โดย Labels ที่ได้อาจจะมาจาก original dataset หรือ KMeans Clustering ก็ได้
+    for xs, ys, labels in zip(xs, ys, labels) : 
+        plt.annotate(labels, (xs, ys), fontsize = 5, alpha = 0.75)
+    plt.show() # *** แกน x & y axis ของ TSNE ไม่สามารถแปลความหมายใดๆได้ แม้กระทั่งข้อมูลเดียวกัน learning rate เท่ากัน ภาพที่ได้ก็ไม่เหมือนกัน ดูแค่ว่า มันจัดกลุ่มแยกกันได้พอ
+
+
+    # PCA (Principle Component Analysis) : represents same data, using less features
+        # first step : de-correlation
+        # second step : reduce dimension
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components = n) : ระบุจำนวน components(features) n จำนวนแรก ที่มี variance สูงสุด ซึ่ง PCA จะ retain เอาไว้โดยไม่ตัดออก, โดยปกติจะระบุ 2 components เพราะใช้ในการ visualize ง่าย
+    pca.fit(samples) : samples เป็น numpy 2D arrays
+    transformed = pca.transform(samples) : samples จะเหลือแค่ n columns(components or features) ตามจำนวนที่ระบุใน PCA(n_components = n)
+    print(transformed)
+        # find variance (Eigenvalues**)
+            # This ordering allows us to prioritize the most significant components that explain the most variance in the data. 
+            # It helps us understand which components contribute the most to the overall variability and decide how many components to retain or consider for analysis.
+        components = range(len(pca.components_))
+        plt.bar(components , pca.explained_variance_) # ทีนี้เราก็จะเห็นว่า components ไหนที่มี variance เยอะกว่าอันอื่น ซึ่งก็จะเป็น most significant components or "intrinsic dimension" และ จะถือว่า lower variance features เป็น noise
+        plt.xticks(components)
+        plt.xlabel('PCA components')
+        plt.ylabel('Variance')
+        plt.show()
+    # เลือก Most significant components 2 อัน มา Visualize
+        # ในการทำ dimensionality reduction สำหรับ reduce overfitting ของ supervised model เราสามารถเริ่มที่ components มากๆ แล้ว visualize ออกมาเพื่อเลือกให้เหลือ dimension ที่สำคัญจริงๆ
+    xs = transform[:, 0]
+    ys = transform[:, 1]
+    plt.scatter(xs, ys, c = species)
+    plt.show()
+
+    plt.scatter(samples[:, 0], samples[:, 1], c = species, alpha = 0.5) : เลือก features 2 features แรกของ samples มา เพื่อ plot ร่วมกับ coefficient & mean ของ 2 features แรกในการหา Principle component ของ 2 features แรก
+    mean = pca.mean_ # numpy 1D array ค่าเฉลี่ยของ each feature
+    first_pc = pca.components_[0, :] # แสดง coefficient of each feature(Eigenvector**) ของ first component, model.components = numpy 2D arrays [[, ], [, ]] โดยมีจำนวน rows ตามจำนวน components
+    second_pc = pca.components_[1, :]
+    plt.arrow(mean[0], mean[1], first_pc[0], first_pc[1], color = 'red', width = 0.01) # plot หา Principle component ของ 2 features แรกของ samples, plt.arrow(x, y, lenght_arrow_x_direction, lenght_arrow_y_direction)
+    plt.arrow(mean[0], mean[1], second_pc[0], second_pc[1], color = 'red', width = 0.01)
+    plt.axis('equal')
+    plt.show()
+
+        
+
+    # Non-negative matrix factorization : require sample features be 'non-negative' or >= 0, ยกตัวอย่าง dataset ที่เหมาะ เช่น word frequency 
+        # มันคือการ factorized matrix ออกเป็น 2 ส่วนคือ nmf_features และ nmf.components_ 
+            # ก่อน fit samples กับ NMF อย่าลืม standardize ก่อนจะดีมาก แต่หากใช้ StandardScaler() แล้วพบว่า scaled samples มีค่า negative values ให้ใช้ MinMaxScaler แทน
+            from sklearn.preprocessing import MinMaxScaler
+            scaler = MinMaxScaler(feature_range=(0, 1))
+            scaled_samples = scaler.fit_transform(data)
+    from sklearn.decomposition import NMF
+    nmf = NMF(n_components = 2) 
+    nmf.fit(samples) 
+    nmf_features = nmf.transform(samples) # โดย nmf_features จะได้ matrix ที่มีจำนวน n dimensions (components)
+        # reconstruction of sample (matrix multiplication) = nmf_features * nmf.components_ , จะได้ matrix ที่ใกล้เคียงกับ samples เดิมมากๆ
+            Examples : samples = 3 x 4 Matrix
+            n components = 2
+            0 0 0 0   0 0   0 0 0 0
+            0 0 0 0 = 0 0 * 0 0 0 0
+            0 0 0 0   0 0
+    print(samples.shape)
+    print(nmf_features.shape)
+    print(nmf.components_.shape)
+    print(nmf_features)
+    
+    plt.scatter(nmf_features[:, 0], nmf_features[:, 1])
+    plt.xlabel("Component 1")
+    plt.ylabel("Component 2")
+    plt.title("Dimensionality Reduction using NMF")
+    plt.show()
+        # recommendation system using NMF , สามารถใช้ร่วมกับ make_pipeline ได้
+        from sklearn.preprocessing import Normalize 
+        norm = Normalize()
+        norm_features = norm(nmf_features)
+        df = pd.DataFrame(norm_features, index = titles) : titles ก็มาจาก index ของ samples ตอนแรก
+        current_article = df.loc['title_name'] : เลือก article ที่ต้องการ
+        similarities = norm_features.dot(current_article) : norm_features X current_article
+        print(similarities)
+        print(similarities.nlargest()) # find the articles with the highest cosine similarity (หรือก็คือ articles ที่ใกล้เคียงกับ current_article ที่เราเลือกมาที่สุด))
+
+
+# technique for visualization
+    # ใส่ transformed dimension เข้าไปใน df เดิม
+df['first_dimension_transformed'] = transformed[:, 0]
+df['second_dimension_transformed'] = transformed[:, 1]
+sns.scatterplot(data = df, x = 'first_dimension_transformed', y = 'second_dimension_transformed', hue = 'category') # เลือก category ที่ต้องการ visualize
+
+# สามารถใช้ ร่วมกับ pipeline เพื่อ ทำ feature scaling & predictive model ได้
+    # การทำ scaler & dimensionality reduction นั้น ไม่สามารถทำกับ one sample หรือ sample ขนาดเล็ก, ดังนั้น sample / test set ที่ได้มาใหม่ ควรจะเอามาใส่รวมใน model ก่อน แล้ว train ใหม่อีกรอบ
+pipe = Pipeline([
+    ('scaler', StandardScaler()),  
+    ('reducer', PCA(n_components=3)),  
+    ('classifier', RandomForestClassifier()) 
+])
+
+pipe.fit(X_train, y_train)
+pipe.predict(X_test)
+pipe.score(X_test, y_test)
+

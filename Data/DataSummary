@@ -1,0 +1,997 @@
+                                                                        ----------Data Importing----------
+
+
+file = 'filename.txt'
+open(file, mode = 'r') : r = read
+print(file.read())
+file.close
+
+with open('filename.txt') as file :
+    print(file.readline())
+
+
+df = pd.read_csv('filename.csv', sep = '\t', comment = '#', na_values = ['Nothing'])
+    sep = '\t' : เว้นวรรคด้วย tab
+    comment = '#' : บรรทัดไหนที่เริ่มต้นด้วย # จะถูกข้าม เพราะถือว่าเป็น comment
+    na_values = ['Nothing'] : ข้อมูลไหนที่เป็น 'Nothing' จะถูกอ่านว่าเป็น NaN
+
+
+xls = pd.ExcelFile('filename.xlsx')
+print(xls.sheet_names) : ได้ list ของชื่อแต่ละ sheet ใน file excel
+df = xls.parse('sheetname') : เปิด sheet นั้นๆใน excel มาเป็น df
+df = xls.parse(0) : เปิด sheet นั้นๆใน excel มาเป็น df, 0 คือ index ของ sheet ใน excel
+
+
+from sas7bdat import SAS7BDAT : import SAS file มาเป็น dataframe
+with SAS7BDAT('filename.sas7bdat') as file : 
+    df = file.to_data_frame(file)
+
+
+df = pd.read_stata('filename.dta') : import stata file มาเป็น dataframe
+
+
+import pickle : สำหรับเปิด pkl file
+with open('filename.pkl', 'rb') as file :
+    data = pickle.load(file)
+print(data) : ข้อมูลที่ได้ออกมาจะเป็น dictionary
+
+
+import h5py
+data = h5py.File('filename.hdf5'. 'r')
+for key in data.keys() :
+    print(key) : จากนั้นเลือกมา 1 key( = dataset)
+dataset = data('primary_key')
+for key in dataset.keys() : 
+    print(key) : จากนั้นเลือก key (subgroups ที่ต้องการ import)
+list = np.array(data['primary_key']['secondary_key'])
+
+
+import scipy.io : for import MATLAB (.mat) file
+mat = scipy.io.loadmat('filename.mat')
+print(mat.keys()) : จากนั้น เลือกมา 1 key (1 dataset)
+print(mat['key_name']) : จะได้ผลเป็น numpy array
+
+
+*****Relational database***** : import data มาจาก relational database management system eg. mySQL
+
+Workflow of SQL querying
+- import package and function
+- create database engine
+- connect to the engine
+- query the database
+- save query result to dataframe
+- close the connection
+
+
+from sqlalchemy import create_engine
+engine = create_engine('sqlite:///address.sqlite')
+table_names = engine.table_names()
+print(table_names)
+con = engine.connect()
+rs = con.execute("SELECT * FROM table") : query database by SQL language
+    * หมายถึง เลือกทั้ง dataset มาเลย
+    "SELECT orderID, date, name FROM table" : ระบุ keys หรือ columns ที่ต้องการ query
+    "SELECT * FROM table WHERE name == 'product'" : เลือก column ที่จะ filter
+    Inner Join :
+        "SELECT * FROM table1 INNER JOIN table2 on table1.key_join = table2.keyjoin"
+df = pd.DataFrame(rs.fetchall())
+    rs.fetchmany(size = n) : import n rows from table
+df.columns = rs.keys() : set column name ของ dataframe ให้เป็นไปตาม key
+con.close()
+
+or
+
+pd.read_sql_query("SELECT * FROM Table", engine)
+
+
+
+
+
+
+
+
+                                                                        ----------Data Exploration----------
+
+df.head(10) : display top few rows
+df.info()
+df.values : turn dataframe into numpy 2D array
+df.columns : display numpy arrays of columns
+df.index : display numpy arrays of index
+df.shape : ดูว่า df มีกี่แถว กี่คอลัมน์
+    array.reshape(-1, 1) : เปลี่ยน 1D array ให้เป็น 2D array
+df.dtypes : ดูว่าแต่ละคอลัมน์มีข้อมูลชนิดไหนบ้าง (object, int, float)
+    cat_columns = df.select_dtypes(include = ['object']) : เลือกเฉพาะ column ที่เป็น categorical data
+pd.set_option('display.max_columns', 200) : ตั้งค่าใ้ห้ pandas dataframe แสดงจำนวนคอลัมน์ทั้งหมด
+
+df.rename(columns = {'oldname':'newname'})
+revalue_dict = {'High':'1', 'Medium' : '2', 'Low' : '3'} : เปลี่ยนข้อมูลใน column ตาม dictionary
+    df['Level'] = df['Level'].replace(revalue_dict)
+
+
+df.sort_values(''), df.sort_values('' , ascending = FALSE), .sort_values(['', ''], ascending = [TRUE, FALSE] )
+
+
+df[df[''].isin(['',''])] : เลือกแถวที่ข้อมูลใน column อยู่ใน list , if don't crop all of these with df[], it will show boolean logic. 
+select columns : df[''], df[['', '']]
+delete columns : df.drop([''], axis = 1), ถ้า axis = 0 คือ delete rows
+logical : df[df[''] == ...], df[(df[''] >= ...) & (df[''] <= ...)], & = and, | = or
+logical for date : '2017-12-31' = standard date format, df[df['date'] < '2023-01-31'] ** this international date form can also be used with .sort_value 
+    eg. temperatures_bool = temperatures.loc[(temperatures['date'] >= '2010-01-01') & (temperatures['date'] <= '2011-12-31')]
+df['Thai'] = df['Country'] == 'Thailand : สร้าง column ที่เป็น boolean logic (True/False) ขึ้นมา
+
+
+
+pd.to_datetime(df[''], utc = True, ,format = '%Y%m%d',infer_datetime_format = True, errors = 'coerce') : ถ้าเพิ่ม .dt.date คือตัดส่วนของเวลาออก แต่จะได้ค่าออกมาเป็น object แทน
+    infer_datetime_format = True : คือสรุป format input กับ output ให้เลย
+    errors = 'coerce' : return ค่าที่ไม่น่าใช้เวลาออกมาเป็น NaT (Not a Time)
+df['date'] = pd.to_datetime(df['year'] + '-' + df['month']) : การใช้ function .to_datetime เพื่อผสาน year-month-day เข้าด้วยกัน
+extract
+    import datetime as dt
+    data['month'] = df['date'].dt.month
+    data['year'] = df['date'].dt.year
+    data['weekday'] = df['date'].dt.weekday : monday = 0, sunday = 6
+df['decade'] = (np.floor(df['year']/10) * 10).astype(int) : สร้าง column decade ขึ้นมาจาก column year
+
+        Example : Cross field validation โดยมี column birthdate, age -> เช็คว่า age ถูกต้องไหม
+            today = dt.date.today()
+            age_manual = today.year - df['birthdate'].dt.year
+            age_equal = df['age'] == age_manual
+            age_correct = df[age_equal]
+            age_incorrect = df[~age_equal]
+
+df[''].dt.strftime('%Y-%m-%d') : เปลี่ยน datetime values ใน column ให้เป็น string format ตามที่ระบุ
+
+
+
+
+
+
+
+                                                                        ----------Statistics----------
+
+
+simple random : df.sample(n, replace = True, random_state = 123) : สุ่มตัวอย่างจำนวน n ครั้ง ด้วยการหยิบแล้วจับคืนไปในกลอ่งสุ่มเดิม
+systematic random :
+    interval = pop_size // sample_size , pop_size = len(df), sample_size = n
+    df.sample(frac = 1, random_state = 123).reset_index(drop = True) : frac หมายถึงสัดส่วนของ dataframe ที่นำมา random, ถ้า frac = 1 หมายถึง shuffle ทั้ง whole dataset
+        จะมี rows ที่ซ้ำกันเนื่องจากเป็น sampling with replacement
+    df.iloc[::interval]
+    df.reset_index()
+proportional stratified random : 
+    df.groupby('country').sample(frac = 0.1, random_state = 123)
+        new_df['country'].value_counts(normalize = True) : กรณีนี้จะได้สัดส่วนของแต่ละประเทศเท่ากับ original dataset
+equal counts stratified sampling :
+    df.groupby('country').sample(n = 15, random_state = 123)
+        new_df['country'].value_counts(normalize = True) : กรณีนี้จะได้สัดส่วนของแต่ละประเทศไม่เท่ากับ original dataset แต่จะได้สัดส่วนแต่ละประเทศเท่ากัน ที่ประเทศละ n rows
+cluster sampling + multi-stage sampling : 
+    import random
+    cluster = random.sample(df['country'].unique(), k = 3) : สุ่ม cluster มา 3 ประเทศจากทั้งหมด
+    new_df = df[df['country'].isin(cluster)]
+    new_df['country'] = new_df['country'].cat.remove_unused_categories()
+    new_df = new_df.groupby('country').sample(n = 15, random_state = 123)
+
+relative_error = abs(population_mean - sample_mean) / population_mean * 100 , ยิ่ง sample size มาก relative error จะยิ่งน้อย
+sampling_distribution : central limit theorem -> ยิ่ง sample size มาก จะพบว่า range ของ แกน X ใน distribution plot จะยิ่งแคบ (S.D. ลดลง) และเข้าใกล้ normal distribution มากขึ้นเรื่อยๆ , นำมาใช้หลักการเดียวกับ Confidential interval เนื่องจากชีวิตจริงเราไม่สามารถมา sampling กลุ่มตัวอย่างวิจัยใหม่เป็นร้อยรอบ
+    mean = []
+    for i in range(100) : sampling กลุ่มตัวอย่าง 100 ครั้ง จาก population
+        mean.append(population.sample(n = n)['column'].mean())
+    plt.hist(mean)
+standard deviation of sampling distribution = *** Standard Error = population S.D. / np.sqrt(sample size(n)) 
+
+ิbooststrapping : treat dataset as a sample and use it to build up theoretical population.
+booststrap distribution :
+    mean_booststrap = [] : สามารถใช้ estimator อื่น นอกจาก mean ได้ ในกรณีของ booststrap distribution เช่น RR, OR, Area under ROC curve
+    for i in range(100) 
+        mean.append(np.mean(df.sample(frac = 1, replace =True)['column'])) # frac = 1 หมายถึง sampling ทั้ง dataset
+    plt.hist(mean)
+booststrap distribution mean :
+    - usually close to sample mean, but may not be a good estimate of the population mean
+    - it is generally great for estimating population standard deviaiton *****
+    - cannot correct biases from sampling
+standard_error = np.std(mean_booststrap, ddof = 1) = population S.D. / np.sqrt(sample size(n)) 
+ดังนั้น population S.D. = standard_error * np.sqrt(sample size(n)) , ในที่นี้ sample size = len(df)
+
+Confidential interval : values within standard deviation of the mean distribution (mean_booststrap)
+quantile method for 95% CI : [np.quantile(mean_booststrap, 0.025), np.quantile(mean_booststrap, 0.975)]
+std_error method for 95% CI : 
+    point_estimate = np.mean(mean_booststrap)
+    std_err = np.std(mean_booststrap, ddof = 1)
+    lower_bound = scipy.stats.norm.ppf(0.025, loc = point_estimate, scale = std_err)
+    upper_bound = scipy.stats.norm.ppf(0.975, loc = point_estimate, scale = std_err)
+
+hypothesis testing : 
+    # one sample t-test
+    null hypothesis : ค่าเฉลี่ยอายุของกลุ่ม A มากกว่า x อย่างมีนัยสำคัญทางสถิติ (right-tailed test)
+    mean = df[df['group'] == 'A']['age'].mean()
+    mean_hypothesis = x
+    np.std(mean_booststrap, ddof = 1) : ได้ std.error
+    z_score = (mean - x) / std.error 
+        z-statistic indicates how many standard deviations the data point estimate "mean" is above or below the "mean_hypothesis"
+    due to right-tailed test
+        p-value = 1-scipy.stats.norm.cdf(z_score, loc = 0, scale = 1)
+    if left-tailed test
+        p-value = scipy.stats.norm.cdf(z_score, loc = 0, scale =1)
+    
+    significant level(alpha) = 0.05, confidential interval = 1- alpha = 0.95 (95%CI)
+    ถ้า p-value < alpha : reject null hypothesis
+    จากนั้นก็คำนวน 95% CI โดยเลือกเอาว่าจะใช้ quantile mehtod หรือ std_error method
+
+    # independent t-test
+    null hypothesis : ค่าเฉลี่ยอายุของกลุ่ม A มากกว่า กลุ่ม B อย่างมีนัยสำคัญทางสถิติ (right-tailed test)
+    mean_A = df[df['group'] == 'A']['age'].mean()
+    mean_B = df[df['group'] == 'B']['age'].mean()
+    std.error = np.sqrt(np.var(group_A) + np.var(group_B))
+    t_statistic = (mean_A - mean_B) / std.error # หากจะ visualize bootstrap distribution เพื่อดูว่าใช้ parametric test ได้ไหม ก็นำ df[df['group'] == 'A']['age'] - df[df['group'] == 'B']['age'] มา plot histogram
+    degree_of_freedom = number_groupA + number_groupB - 2
+    p-value = 1 - scipy.stats.t.cdf(t_statistic, df = degree_of_freedom)
+
+    # paired t-test
+    null hypothesis : ค่าเฉลี่ยคะแนนของกลุ่ม A ในปี 2020 มากกว่า กลุ่ม A ในปี 2010 อย่างมีนัยสำคัญทางสถิติ (right-tailed test)
+    mean_A_2020 = df[(df['group'] == 'A') & (df['year'] == 2020)]['score'].mean()
+    mean_A_2010 = df[(df['group'] == 'A') & (df['year'] == 2010)]['score'].mean()
+    std.error = np.sqrt(np.var(score_A_2020 - score_A_2010))
+    degree_of_freedom = number of group A - 1
+    t_statistic = (mean_A_2020 - mean_A_2010) / std.error
+    p-value = 1 - scipy.stats.t.cdf(t_statistic, df = degree_of_freedom)
+if left-tailed test : 
+    p-value = scipy.stats.t.cdf(t_statistic, df = degree_of_freedom)
+elif two-tailed test :
+    p-value = 2 * (1 - scipy.stats.t.cdf(t_statistic, df = degree_of_freedom))
+
+pengouin.ttest(x = 'group1', y = 'group2', paired = True/False, alternative = 'greater/less/two-sided') # ถ้า one-sample ก็ให้ y = 0
+pengouin.anova(data = , dv = '', between = '', padjust = 'none') : dv = dependent variables, between = groups
+pg.pairwise_tests(data=car, dv='mpg', between='origin', padjust='bonf')
+    padjust = 'none' แสดง p-value of two levels being compared on each row
+   **padjust = 'bonf' แสดง p-value of two levels being compared on each row ที่ได้รับ bonferroni correction : ใช้แก้ไข multiple testing problem ที่เวลาหาความสัมพันธ์กันหลายคู่ แล้วจะต้องมีบางคู่ที่บังเอิญสัมพันธ์กัน แม้จะไม่เกี่ยวข้องกันเลย
+
+
+    # chi-square test / proportion test : chi2 stat = z-score(ของความแตกต่างระหว่าง frequency ของแต่ละ category) ** 2
+    H 0 : Gender categories are independence of intervention groups. : ในการทดสอบสมมติฐานของการทำ RCT เราต้องการให้ accept H0 หรือ p-value > 0.05
+        or there is no association between gender and intervention groups.
+    intervention_by_gender = df.groupby('intervention')['gender'].value_counts(normalize = True)
+    intervention_by_gender = intervention_by_gender.unstack()
+    intervention_by_gender.plot(kind = 'bar', stacked = True, color = ['lavender', 'cornflowerblue', 'navy'])
+    expected, observed, stats = pingouin.chi2_independence(data = intervention_by_gender, x = 'intervention', y = 'gender')
+    print(stats) # degree of freedom = (No.of response variable - 1) * (No.of explanatory variable - 1)
+
+
+# non-parametric test
+    small sample size --> ทำให้ ไม่สามารถนำ central limit theorem ที่ assume ว่าข้อมูล population เป็น normal distribution ได้ , ทำให้ confidential interval กว้าง, เพิ่มโอกาสการเกิด false pos & false neg
+    for parametric test : sample size >= 30 ในแต่ละกลุ่ม ถึงสามารถ assume ว่าหากมาทำ bootstrap distribution แล้ว จะเป้นไปตาม central limit theorem
+                          sample size >= 5 ในแต่ละกลุ่มของ chi-square test
+    อีกวิธีนึงคือ สร้าง visualization ของ bootstrap distribution ของ estimator point ขึ้นมา
+
+wilcoxon-signed rank : in stead of paired t-test
+    from scipy.stats import rankdata , เครื่องมือจัดอันดับข้อมูลใน list
+    df['diff'] = df['control_post'] - df['control_pre'] : สร้าง column ผลต่างก่อน-หลัง
+    df['absolute_diff'] = df['diff'].abs() : สร้าง column ค่าสัมบูรณ์ของผลต่าง
+    df['rank_absolute_diff'] = rankdata(df['absolute_diff']) : สร้าง column ว่าค่าสัมบูรณ์ของผลต่าง อยู่ลำดับที่เท่าไหร่
+    minus = นำ rank ของผลต่าง (df['diff'] < 0) มา + กัน
+    plus = นำ rank ของผลต่าง (df['diff'] > 0) มา + กัน
+    W_stat = np.min([minus, plus])
+    result = pingouin.wilcoxon(x = df['control_post'], y = df['control_pre'], alternative = 'greater/less/two-sided')
+mann-whitney test : in stead of unpaired t-test
+    pingouin.mwu(df['group1']. df['group2'], alternative = 'greater/less/two-sided')
+kruskal-wallis : in stead of anova
+    pingouin.kruskal(data = df, dv = 'dependent_variables_column', between = 'category_column')
+
+
+
+
+np.random.seed() : บันทึกการสุ่มครั้งนี้ไว้
+np.random.uniform(low = min, high = max, size = n) : random number จาก uniform distribution ที่กำหนด
+np.random.normal(loc = mean, scale = S.D., size = n) : random number จาก normal distribution ที่กำหนด
+
+
+np.linspace(0, 1, 5) = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0] : สามารถใช้ เป็น bins ตอน plot histogram ได้
+
+probability = number of ways the event can happen / total number of possible outcomes
+law of large numbers : as the size of your sample increases, the sample mean will approach the expected value.
+
+scipy.stats.uniform.cdf(value กลาง, lowerlimit, upperlimit) : หาพื้นที่ใต้กราฟ หรือ probability ของ uniform distribution, โดยพื้นที่ใต้กราฟทั้งหมดจะเท่ากับ 1 เสมอ***
+scipy.stats.uniform.rvs(lowerlimit, upperlimit- lowerlimit, size = n) : generate random number ภายใน uniform distribution ที่กำหนด
+
+# binomial distribution ใช้ได้ในกรณีที่เป็นการสุ่มแบบใส่คืนเท่านั้น
+binom.pmf(7, 10, 0.5) = โอกาสที่จะออกหัว 7 ครั้ง จากการโยนเหรียญทั้งหมด 10 ครั้ง โดยที่แต่ละครั้งมีโอกาสออกหัว 50 เปอร์เซนต์
+binom.cdf(7, 10, 0.5) = โอกาสที่จะออกหัว ตั้งแต่ 1-7 ครั้ง จากการโยนเหรียญทั้งหมด 10 ครั้ง โดยที่แต่ละครั้งมีโอกาสออกหัว 50 เปอร์เซนต์
+1 - binom.cdf(7, 10, 0.5) = โอกาสที่จะออกหัว มากกว่า 7  ครั้ง จากการโยนเหรียญทั้งหมด 10 ครั้ง โดยที่แต่ละครั้งมีโอกาสออกหัว 50 เปอร์เซนต์
+expected value = range of trials x prob of success
+scipy.stats.binom.rvs(number of coins(จำนวนเหรียญต่อการโยน 1 ครั้ง), prob of success(โอกาสที่จะออกหัว), range of trials(จำนวนครั้งที่ทาย)) : generate random number มาเป็นแบบ binomial distribution โดยแต่ละครั้งจะนำเหรียญที่ออกหัว(1) มาบวกกัน
+
+
+from scipy.stats import norm : **95% ของพื้นที่ใต้กราฟอยู่ระหว่าง -2 ถึง +2S.D.
+    norm.cdf(value, mean, S.D.) : หาพื้นที่ใต้กราฟ หรือ probability ที่จะได้ค่าน้อยกว่าเท่ากับ value ใน normal distribution นั้นๆ
+    norm.ppf(percent, mean, S.D.) : หาจำนวนที่อยู่บริเวณ percent point ของกราฟ normal distribution
+    norm.rvs (mean, S.D., size) : generate random number เป็น normal distribution
+
+# poisson distribution : probablity of some number of events occuring over a fixed period of time (eg. โอกาสที่จะเกิดเหตุการณ์ จำนวน n ครั้ง ต่อชั่วโมง/สัปดาห์/ปี เป็นต้น)
+from scipy.stats import poisson
+    poisson.pmf(5, 8) : โอกาสที่จะมีคนเข้าร้านอาหาร 5 คนต่อชั่วโมง เมื่ออัตราการเข้าร้านอาหารเฉลี่ยต่อชั่วโมงอยู่ที่ 8 คน
+    poisson.cdf(5, 8) : โอกาสที่จะมีคนเข้าร้านอาหาร 1-5 คนต่อชั่วโมง เมื่ออัตราการเข้าร้านอาหารเฉลี่ยต่อชั่วโมงอยู่ที่ 8 คน
+    1 - poisson.cdf(5, 8) : โอกาสที่จะมีคนเข้าร้านอาหาร > 5 คนต่อชั่วโมง เมื่ออัตราการเข้าร้านอาหารเฉลี่ยต่อชั่วโมงอยู่ที่ 8 คน
+    poisson.rvs(8, size = 10) : generate random number เป็น poisson distribution , จำนวนคนเข้าร้านเฉลี่ย 8 คนต่อชั่วโมง โดยสุ่มมา 10 ชั่วโมง
+
+
+
+
+df.describe()
+df.nlargest(n, 'column') : แสดงผลจำนวนที่มากที่สุด n อันดับ ของ 'column' ใน df
+.mean(), .mode(), .median(), .var(), .std()
+.quartile(x) e.g. range(0,101).quartile(0.75) = 75
+.max(), .min(), .cumsum(), .cummax(), cummin() =  แสดงค่าจำนวนที่ยังคงมากที่สุด/น้อยที่สุด
+
+mean/median : np.mean/median(df['column']) ; mean for symmetrical data, median for asymmetrical data(left or right skewed)
+mode : statistics.mode(df['column']) or .value_counts(ascending = False); for categorical data 
+variance : np.var(df['column'], ddof = 1)  : ddof = 1 หมายถึงคำนวน sample variance ถ้าไม่ระบุ คือ population variance
+S.D. : np.std(df['column'], ddof = 1) or np.sqrt(np.var(df['column'], ddof = 1))
+
+np.quantile(df['column'], 0.5) or  np.quantile(df['column'], [0.75, 0.25]) : 0.5 quantile = median 
+plt.boxplot(df['column']) : represents interquantile range & median
+iqr : from scipy.stats import iqr
+    iqr(df['column']) or np.quantile(df['column'], 0.75) - np.quantile(df['column'], 0.25)
+def iqr(column) : 
+    iqr = column.quantile(0.75) - column.quantile(0.25)
+    return iqr 
+df['column'].agg(iqr) = นำข้อมูลใน column นั้นทั้งหมดมาหา interquartile range 
+outlier :
+    data < np.quantile(df[''], 0.25) - 1.5 * iqr(df['']) or
+    data > np.quantile(df[''], 0.75) + 1.5 * iqr(df[''])
+    # -3S.D. to +3S.D.
+    mean = df[''].mean()
+    std = df[''].std()
+    cutoff = std * 3
+    lower, upper = mean - cutoff, mean + cutoff
+    df_remove_outlier = df[(df[''] < upper) & (df[''] > lower)]
+
+
+df[''].agg(function()), df[['', '']].agg([function1(), function2()]) นำข้อมูลทั้งหมดใน column นั้นๆมาใช้ function ร่วมกัน, ต่างจาก .apply() ซึ่งจะค่อยๆทยอยใส่ function ให้ทีละค่าใน column    
+
+df[''].value_counts() นับ **categorical** variable, .value_counts(sort = True, normalize = True) แสดง categorical variable เป็น proportion แล้วเรียงลำดับจากมากไปน้อย
+df.groupby('column1', as_index = False)['column2'].mean() -> column1 คือข้อมูลที่เรา group มาเช่น สีต่างๆของหมา, column2 คือdata ของแต่ละ group ที่เราต้องการหาค่าทางสถิติ
+    สามารถใช้ .agg([min, max, mean]) ได้ ในกรณีต้องการหาค่าทางสถิติหลายค่า
+    df.groupby(['',''])[['','']].sum()
+    df.groupby('')[''].agg([np.mean, np.median])
+df.groupby('name').filter(lambda group : len(group) >= n) : กรณีจะหา nominal value ใน column ที่มีจำนวนมากกว่า n ยกตัวอย่างเช่น หาชื่อคนไข้ที่เคย admit มากกว่า 2 รอบ, หาคนที่เคยชนะรางวัล มากกว่า 2 ครั้ง
+
+
+
+df.pivot_table(values = 'column ที่เราจะใส่ค่าลงไปเพื่อหาค่าจาก aggfunc', index = 'column ที่เราจะให้เป็น index', columns = 'columnที่เราต้องการ', aggfunc = [np.mean, np.median], margins = True, fill_value = 0)
+    อาจจะใส่แค่ argument index หรือ column อย่างใดอย่างนึง และใส่ values มากกว่าหนึ่งได้
+    argument fill_value = 0 : คือ fillna(0)
+
+
+df.sample(size = n), df.sample(frac = 0.5, random_state = 123) frac บ่งบอกว่าจะ random เป็นสัดส่วนเท่าไหร่ของ df เดิม
+    df.iloc[::interval] : interval คำนวนจาก len(df) // samplesize
+    df[['', '', '']].sample(frac = 0.5)
+    df.sample(n = N, weights = '') : stratified sampling โดยให้น้ำหนัก ตามสัดส่วนของ data ใน column ที่ระบุ
+    df.groupby('').sample()
+
+scipy.stats.shapiro() : test for normality
+scipy.stats.chi2_contingency(numpy_2D_table) : chi-square test
+parametric test : scipy.stats.ttest_rel(group1_before, group1_after), scipy.stats.ttest_ind(group1, group2)
+non-parametric test : scipy.stats.wilcoxon(group1_before, group1_after), scipy.stats.mannwhitneyu(group1, group2)
+
+
+คำนวณหา Confidential interval of mean difference : https://youtu.be/hxZ6uooEJOk
+    alpha = 0.05
+    z_alpha = stats.norm.ppf(1-(alpha/2))
+    mean_diff = InterventionGroup.mean() - ControlGroup.mean()
+    std_error = np.sqrt((np.var(group1)/len(group1)) + (np.var(group2)/len(group2)))
+    CI_low = self.diff - (self.z_alpha * self.std_error)
+    CI_high = self.diff + (self.z_alpha * self.std_error)
+    z_stat, pvalue = stats.mannwhitneyu(InterventionGroup, ControlGroup)  or stats.ttest_ind(InterventionGroup, ControlGroup)
+        การเลือกใช้สถิติ (Parametrics & Non-Parametrics) ขึ้นอยู่กับ study design & assumption test (Distribution & Homogenicity of variance)
+
+df.groupby('')[''].value_counts(normalize = True) ใช้กับ categorical data เพื่อมาหาความสัมพันธ์ระหว่างสองตัวแปรด้วย chi-square   
+    newdf = df.unstack() : ทำให้เป็น dataframe แบบปกติ
+    newdf.plot(kind = 'bar', stacked = True)
+
+หาความสัมพันธ์ระหว่าง continuous data ของ 2 group หรือมากกว่า
+    newdf = df[['column of group', 'column of continuous data']]
+    newdf.pivot(columns = 'column of group', values = 'column of continuous data')
+
+sns.heatmap(df.corr(), annot = True)
+sns.pairplot(data = df, vars = ['', '', ''], height = 3, aspect = 1.5) : vars คือ columns ของตัวแปรที่สนใจ
+
+
+
+***** Regression with statsmodels ***** : ใช้หา insight, ส่วน scikit-learn ใช้ predict
+
+##################################### Simple Linear Regression ##########################################
+from statsmodels.formula.api import ols
+# Create the "simple linear regression"  model object 
+    # กรณีที่ Explanatory variable ของ Simple linear regression เป็น continuous variable
+model = ols('response(dependent variable) ~ explanatory(independent variable)', data=df)
+    # กรณีที่ Explanatory variable ของ Simple linear regression เป็น categorical variable : เช่นการ predict รายได้ จาก อาชีพ
+model = ols('response(dependent variable) ~ explanatory(independent variable) + 0', data=df) , + 0 คือตัด constant (interception) ออก
+# Fit the model
+model = model.fit()
+# Print the parameters of the fitted model : จะแสดง intercept & slope ของ explanatory variable (สมการของ model)
+print(model.params)
+print(model.summmary())
+# predict workflow
+predict_data = pd.DataFrame({'explanatory_variable':emo['explanatory_variable']})
+predict_data['predict_response'] = model.predict(emo['explanatory_variable'])
+print(predict_data)
+    # show linear regression plot
+fig = plt.figure()
+sns.regplot(x = 'explanatory variable', y = 'response variable', data = df, ci =None) : อันนี้คือเอามาจาก data ที่เราเอามา train
+sns.scatterplot(x = 'explanatory_create', y = 'predict_response', data = predict_data, color = 'red') : อันนี้เอามาจาก predict_data ที่เราสร้าง
+plt.show()
+
+# predict new data *** 
+coefficients = model.params
+print(coefficient)
+intercept, slope = coefficients : extract coefficients 
+new_explanatory_data = pd.DataFrame({'new_explanatory_variable' : stats.uniform.rvs()})
+new_predict_data = new_explanatory_data.assign(new_response_variable = intercept + slope * new_explanatory_data)
+print(new_predict_data)
+
+
+# R-squared = correlation coefficient ** 2 , adjusted R-squared จะเป็นวิธีที่ conservative กว่า
+model.rsquared or model.rsquared_adj
+# RSE (residual standard error) = "typical" difference between a prediction and an observe response (it has same unit as response variable)
+np.sqrt(model.mse_resid) # because of  MSE (Mean squared error) = RSE ** 2 โดยปกติจะ นิยมใช้ RSE มากกว่า MSE
+# good fit : residuals are normally distributed, the mean of residuals is zero.
+sns.residplot(data = predict_data, x = 'explanatory_variable', y = 'predict_response', lowess = True)
+plt.xlabel('Fitted values')
+plt.ylabel('Residuals')
+
+from statsmodels.api import qqplot
+qqplot(data = model.resid, fit = True, line = '45') # model.resid คือ function ที่คำนวน residual value ของ model ที่เรา fit ไว้ตอนแรก
+plt.show() # ถ้าแต่ละ scatter ส่วนมากวางตัวบนแกน y = x ก็แสดงว่า residual value น่าจะ normally distributed
+
+# หา outlier(Extreme explanatory variables), leverage(how extreme the explanatory variables are.) & influence(cook's distance : measure how much model would change if you left the observation out of the dataset.)
+summary_info = model.get_influence().summary_frame()
+df['leverage'] = summary_info['hat_diag'] : 'hat_diag' คือ column ของ summary_info ที่บ่งบอกค่า leverage
+df['cooks_dist'] = summary_info['cooks_d'] : 'cooks_d' คือ column ของ summary_info ที่บ่งบอกค่า cook's distance ซึ่งเป็นสถิติที่ใช้วัดขนาดของ influence
+print(df.sort_values('cooks_dist', ascending = False).head()) : เพื่อหา the most outlier, leverage & influence
+
+
+
+
+
+##################################### Multiple Linear Regression ##########################################
+
+model = ols("response ~ explanatory + explanatory", data = df).fit() , หากมี explanatory category explantory variable ให้เติม + 0 ต่อท้าย
+    ***กรณีที่ explanatory_continuous & explanatory_categorical 2 ตัว มีความสัมพันธ์กัน เช่น length(continuous) & species(categorical) --> ols('mass ~ species + length:species + 0') จะได้ intercept & slope coefficient เหมือนกับ train แยกแต่ละ species เลย
+        The formula of the model should be of the form 'response_var ~ categorical_var + continuous_var:categorical_var + 0.'
+    # When you include a categorical explanatory variable without the "+ 0" term, the regression equation will include an intercept term along with the binary variables representing the categories.
+        # หมายความว่า intercept coefficient จะเป็น each category (ก็คือ remove global intercept), ส่วน slope coefficient จะเป็นของ continuous explanatory variable
+    ***กรณีที่ explanatory_continuous 2 ตัว มีความสัมพันธ์กัน
+        The formula of the model should be of the form 'response_var ~ explanatory * explanatory'
+
+
+ถ้ามี > 2 explanatory variables 
+
+two way interactions between pairs of explanatory variables
+    model = ols("mass_g ~ length_cm + height_cm + species +  length_cm:height_cm + length_cm:species + height_cm:species + 0", data=fish).fit() 
+    or
+    model = ols("mass_g ~ (length_cm + height_cm + species) ** 2 + 0", data=fish).fit()
+
+three way interactions between all three variables
+    model = ols("mass_g ~ length_cm + height_cm + species + length_cm:height_cm + length_cm:species + height_cm:species + length_cm:height_cm:species + 0",   data=fish).fit()
+    or
+    model = ols("mass_g ~ length_cm * height_cm * species + 0", data=fish).fit()
+
+
+
+# predict workflow : ทำเพื่อสร้างความเข้าใจใน model โดยการสร้าง dataframe ขึ้นมาใหม่ที่เหมือน df เดิม
+
+from itertools import product
+predict_data = df[['explanatory_continuous_variable', 'explanatory_categorical_variable']] 
+predict_data['predict_response'] = model.predict(predict_data)
+print(predict_data)
+
+coefficients = model.params
+print(coefficients) # แนะนำให้ reorder categories ก่อน
+
+intercept_cat1, intercept_cat2, intercept_cat3, slope = coefficients : extract coefficients โดยเรียงตาม coefficients categorical (intercept) & continuous (slope) explanatpry variables
+
+sns.lmplot(data = df, x = 'explanatory_continuous_variable', y = 'response_variable', hue = 'explanatory_categorical_variable', ci = None)
+sns.scatterplot(data = predict_data, x = 'explanatory_continuous_variable', y = 'predict_response', color = 'black')
+plt.show()
+
+
+# predict 
+   เนื่องจาก intercept มีหลายค่า เพราะว่ามีมากกว่าหนึ่ง category ใน column explanatory_categorical_variable จึงต้องสร้าง conditions ขึ้นมา
+   โดย np.select (if condition = [cat1, cat2, cat3], choice will be [intercept_cat1, intercept_cat2, intercept_cat3]) ตามลำดับ *** โดยจำนวนใน conditions & choices list ต้องเท่ากันและเรียงลำดับตามความเชื่อมโยง
+conditions = [predict_data['explanatory_categorical_variable'] == 'cat1',
+              predict_data['explanatory_categorical_variable'] == 'cat2',
+              predict_data['explanatory_categorical_variable'] == 'cat3',
+             ] 
+
+intercept_choices = [intercept_cat1, intercept_cat2, intercept_cat3]
+intercept = np.select(conditions, choices)
+
+# กรณีที่ เรา เขียนแบบ model เราเป็นแบบที่มี 2 ตัวแปรมีความสัมพันธ์ต่อกัน ต้องสร้าง condition ให้ slope ขึ้นมาด้วย
+coefficients = model.params
+intercept_cat1, intercept_cat2, intercept_cat3, slope_cat1, slope_cat2, slope_cat3 = coefficients 
+
+intercept_choices = [intercept_cat1, intercept_cat2, intercept_cat3]
+intercept = np.select(conditions, intercept_choices)
+slope_choices = [slope_cat1, slope_cat2, slope_cat3]
+slope = np.select[conditions, slope_choices]
+
+predict_data = predict_data.assign(predict_response = intercept + slope * predict_data['explanatory_continuous_variable'])
+print(predict_data)
+
+
+
+
+
+##################################### Logistic Regression ##########################################
+from statsmodels.formula.api import logit # for binary response variable (eg. 1/0, True/False) ***** and explanatory variable column is continuous value *****
+model = logit('response(dependent variable) ~ explanatory(independent variable)', data=df).fit()
+print(model.params)
+*** กรณีถ้าเป็น Multiple logistic regression ก็ syntax เหมือน Multiple linear regression
+
+# predict workflow
+predict_data = pd.DataFrame({'explanatory_variable':df['explatory_variable']})
+predict_data['predict_response'] = model.predict(df['explatory_variable'])
+predict_data['most_likely_outcome'] = np.round(predict_data['predict_response'])
+print(predict_data)
+
+# show the logistic regression plot
+sns.regplot(data = df, x = 'explanatory variable', y = 'response variable', ci = None, logistic = True)
+sns.scatterplot(data = predict_data, x = 'explanatory_variable', y = 'predict_response', color = 'red')
+plt.show()
+
+sns.regplot(data = df, x = 'explanatory variable', y = 'response variable', ci = None, logistic = True)
+sns.scatterplot(data = predict_data, x = 'explanatory_variable', y = 'most_likely_outcome', color = 'red') 
+plt.show()
+
+# odd ratio = probability / (1 - probability)
+predict_data['odd_ratio'] = predict_data['predict_response'] / (1 - predict_data['predict_response'])
+predict_data['log_odd_ratio'] = np.log(predict_data['odd_ratio'])
+sns.iineplot(data = predict_data, x = 'explanatory_variable', y = 'odd_ratio')
+plt.axhline(y = 1, linestyle = 'dotted') : odd ratio = 1 แปลว่า response variable มีความน่าจะเป็นที่จะเป็น False
+plt.yscale('log') : เปลี่ยน y axis ให้เป็น logarithm
+
+# quantify logistic regression fit
+confusion_matrix = model.pred_table() : create confusion matrix of model [[true neg, false pos], [false neg, true pos]]
+TN = conf_matrix[0, 0]
+FP = conf_matrix[0, 1]
+FN = conf_matrix[1, 0]
+TP = conf_matrix[1, 1]
+Accuracy = (TP + TN) / (TN + TP + FN + FP) , sensitivity = TP / (TP + FN) , specificity = TN / (TN + FP)
+from statsmodels.graphics.mosaicplot import mosaic
+mosaic(confusion_matrix)
+
+
+
+
+
+
+
+
+
+                                                                       ----------Data Cleaning----------
+
+
+
+
+df.loc[df['col'] == old_value, 'col'] = new_value : เปลี่ยนข้อมูลเดิมใน column ที่กำหนด เป็นข้อมูลใหม่
+    apply with datetime value : ยกตัวอย่างกรณีแก้ technical error ที่มีวันที่ในอนาคตเกินมา
+        df['date'] = pd.to_datetime().dt.date
+        import datetime as dt
+        today = dt.date.today()
+        df.loc[df['date'] > today, 'date'] = today
+
+new_column = []
+for index, rows in df.iterrows() 
+    if rows[''] >= 5 :
+        new_column.append('Pass')
+    else :
+        new_column.append('Fail')
+df['Group'] = np.array(new_column)
+or
+df['Group'] = ((df[''] >= 5) | (df[''] < 5)) : กรณีนี้จะได้เป็น boolean (True or False) มา
+
+
+duplicates = df.duplicates(['', '', ...], keep = False) : ผลที่ได้จะเป็น boolean logic
+    df[df[duplicates]].sort_values('') : นำ duplicates มาใส่เป็น filter เพื่อหา rows ที่มีการซ้ำซ้อนกัน 
+df.drop_duplicates(subset='', inplace = True), df.drop_duplicates(subset=['', ''], inplace = True) : นำข้อมูลของ column นั้นที่ซ้ำกันออก ยกตัวอย่างเช่น คนมา visit ร้านหลายๆครั้ง ก็ตัดเหลือคนเดียวได้
+df[''].unique()
+
+df.set_index(''),.set_index(['', '']) เลือก column ที่มีอยู่แล้วให้เอามาเป็น index, .set_index().sort_index
+    df_ind = df.set_index(['', ''])
+    df_ind_select = df_ind.loc[('index1','index2') : ('index1','index2'), : ] ถ้าเรา set ให้มี index มากกว่า 1 แถว การใช้ loc ต้องใช้ ('', '') ครอบ
+df.loc['rowstart':'rowend', 'columnstart':'columnend'] ในกรณี .loc การ slicing นั้นตัวหลังจะนับรวมไปด้วย
+df.iloc[indexRow : indexRow, indexColumn : indexColumn] ในกรณี .iloc การ slicing นั้นจะไม่นับตัวหลัง (เช่นเดียวกับการ slicing list)
+    df.loc/df.iloc[[, , , ...]] : กรณี specific หลายๆ rows
+
+
+
+df.isna() ดูว่ามี NaN(missing values) ไหม, df.isna().any() เช็คว่ามี column ไหนมี NaN 
+df.isna().sum() : สรุปว่าในแต่ละ columns มี NaN value เท่าไหร่
+    df.isna().sum().plot(kind = 'bar') plot เพื่อ visualize จำนวนของ data ที่หายไป
+        วิธีเช็ครูปแบบของ missing data ใน column
+        import missingno as msno
+        msno.matrix(df.sort_values('column'))
+        plt.show()
+df.dropna() เอา row ที่มี NaN ออกทั้งหมด, df.fillna(0) แทนที่ NaN ด้วย 0
+    df.dropna(subset = ['']) : เลือก column ที่ต้องการ remove NaN values 
+df[''] = df[''].replace(0, np.nan) : replace ค่า 0 ด้วย NaN
+df[''] = df[''].fillna(method = 'ffill') : แทนค่า NaN ด้วย value ใน row ก่อนหน้า
+df[''] = df[''].fillna(0) : replace NaN ด้วย 0 integer
+df[''] = df[''].fillna(df[''].mean())  : replace NaN ด้วย mean (กรณีเป็น numerical variable) 
+df = df.fillna({'col':df['col'].value_counts().index[0]}) : replace NaN ด้วย mode (กรณีเป็น categorical variable) 
+df = df[(~df[''].isnull()) & (~df[''].isnull())] : Exclude rows ที่มี NaN values ของแต่ละ columns
+
+
+
+df.query('nike > 90 and/or disney <140'),  df.query('stock == 'disney' or (stock == 'nike' and close < 90)')  use for nultiple condition (like filtering)  
+    ** string ใน function .query ต้องใช้ "" เท่านั้น
+
+
+df.melt(id_vars = ['col1', 'col2'], var_name = '', value_name = '') 
+    id_vars =  ระบุ columns ที่ให้คงสถานะเดิมไว้ และไม่ถูก melt จาก columns มาเป็นข้อมูลใน rows
+    var_name = ระบุชื่อ columns ของ columns ใหม่ ที่บรรจุข้อมูลของชื่อ columns เดิมที่ถูก melt
+    value_name = ระบุชื่อ columns ของ columns ใหม่ ที่บรรจุข้อมูลภายใน columns เดิมที่ถูก melt
+
+
+สมมติ ข้อมูลใน column แทนที่จะเป็น 2500 แต่เป็น 2,500
+    df[''] = df[''].str.replace("characters to remove", "characters to replace them with") : ในกรณีนี้ argument ในวงเล็บควรจะเป็น (",", "")
+กรณีมีหลาย columns ที่ต้องการแก้ในลักษณะเดียวกัน
+    df[['', '', '']].apply(lambda x : x.str.replace('%', '')) 
+กรณีมี characters & columns ที่ต้องการ clean
+    chars_to_remove = ['+', ',', '$']
+    cols_to_clean = ['col1', 'col2', ...]
+    for col in cols_to_clean:
+        for char in chars_to_remove:
+            apps[col] = apps[col].apply(lambda x: x.replace(char, ''))        
+    df[''] = df[''].astype(float) 
+
+
+***** work with categorical variables
+
+df[''] = df[''].astype('category')
+    print(df[''].cat.categories) : เรียกดู categories ทั้งหมดใน column นั้น
+df[''] = df[''].value_counts(dropna = False) : check ว่าใน column มี categorical variable ที่ตกหล่นไปเป็น NaN value ไหม
+    df.loc[df["column"].isna(), "column"] = "other" : เปลี่ยน NaN values ใน column นั้น เป็น object type
+
+new_categories = ['', '', ...] : สร้าง category ไหมขึ้นมา เพื่อเตรียมแทน categories เดิมใน column
+df[''] = df[''].cat.add_categories(new_categories)
+    df[''] = df[''].value_counts(dropna = False) : เพื่อดูจำนวนของแต่ละ category ทั้งเก่าและใหม่อีกรอบนึง
+df.loc[df['column'] == 'old_category', 'column'] = 'new_category' : เปลี่ยน category ที่มีอยู่เดิม มาเป็น category ใหม่ ใน column เดียวกัน
+df[''] = df[''].cat.remove_categories(removals = ['old_category']) : ลบ category เดิมออก
+
+df[''] = df[''].cat.rename_categories({'old_category':'newname'}) : rename category เดิม
+    df[''] = df[''].cat.rename_categories(lambda c = c.upper()) : สามารถใช้ lambda function มาช่วยได้
+df[''] = df[''].replace({'old_category1':'newname', 'old_category2':'newname', 'old_category3':'newname'}) : เมื่อต้องการเปลี่ยน categories หลายๆอันให้เหลือแค่อันเดียว
+    ถ้าใช้ method นี้ อย่าลืมเปลี่ยนกลับเป็น 'category' type --> df[''] = df[''].astype('category')
+
+df[''] = df[''].cat.reorder_categories(new_categories = ['', '', '', ...], ordered = True, inplace = True) : จัดเรียง category ก่อนหลัง 
+
+clean categorical data --> เช็คด้วย  df[''].cat.categories or df[''].value_counts() ก่อน
+    eg : ' No'
+        df[''] = df[''].str.strip() --> 'NO' : remove space
+        df[''] = df[''].str.title() --> 'No'
+        df[''] = df[''].str.lower() --> 'no'
+        df['text'] = df['text'].str.replace('[^a-zA-Z]', ' ') : [a-zA-Z] = all letter characters, [^a-zA-Z] all non letter characters
+        df[''].replace(map_dict, inplace = True)
+        df[df['country'].str.contains('unitedstate', regex = False)] : เช็ค category ที่ต้องสงสัยว่าจะต้อง clean
+            df['USA'] = np.where(df['country'].str.contains('unitedstate', regex = False), 1, 0) : กรณีอยากเปลี่ยน เป็น integer code สำหรับเตรียม machine learning
+            df['USA'] = np.where((df['country'].str.contains('unitedstate', regex = False)) | (df['country'].str.contains('u.s.', regex = False)), 1, 0)
+                Example สมมติ df['underlying'] ของแต่ละ patient ID มีหลายแบบ เช่น ['HT'], ['HT', 'DM'], ['HT', 'DM', 'DLP'] เป็นต้น
+                underlying_list = ['HT', 'DM', 'DLP']
+                for i in underlying_list :
+                    df[i] = np.where(df['underlying'].str.contains('i', regex = False), 1, 0)
+                    
+    
+df[df[''].str.len() > 10] : ใช้ในการ filter พวกเบอร์โทรศัพท์, ข้อความ
+
+df['income_groups'] = pd.qcut(df['income']), q = 3, labels = ['0-200', '200-500', '500+'] : แบ่งข้อมูลเป็นจำนวน q categories 
+df['income_groups'] = pd.cut(df['income']), bins = [0, 200, 500, np.inf], labels = ['0-200', '200-500', '500+']) : แบ่งข้อมูลเป็น categories ตาม bins ที่กำหนด
+    bins = [0, 200), [200, 500), [500, inf)
+
+
+
+***** sentimental analysis
+
+df['word'] = df['posttwit'].str.split(r'[@|#|,|\s+]') : split ประโยคเป็นคำๆ ใส่ๆใน list
+    df['word'] = df['word'].apply(lambda x = x[0]) : กรณีจะเอาแค่คำแรก ของ list 
+word_count = df['word'].explode().value_counts(normalilze = True)
+
+
+prepare categorical data for machine learning
+    กรณี ordinal data ที่สามารถเรียงลำดับมากไปน้อยได้ : ถ้าใช้ .reorder_categories ก่อน ก็จะง่ายขึ้นมาก
+        codes = df['column'].cat.codes : สร้าง integer codes สำหรับแต่ละ categorical values ใน column
+        name_map = dict(zip( df['column'], codes)) : แสดงผล dict_map ของแต่ละ categorical values ใน column ว่าเป็น codes ไหนบ้าง
+    กรณี nominal data ที่ไม่สามารถเรียงลำดับมากไปน้อยได้
+        df_dummies = pd.get_dummies(df, columns = ['cat1', 'cat2', ...], prefix = 'คำนำหน้า dummy columns')
+        or 
+        dummy = pd.get_dummies(df[['', '', ...]])
+        pd.concat([df, dummy], axis = 1)
+
+
+
+
+                                                                ----------Joining Data----------
+
+
+
+newdf = df1.merge(df2, on = 'name of intercept column', suffixes = ('1', '2'), how = 'left') : if intercept columns are more than 1 --> use ['', '']
+    how = 'left/right/outer' ขึ้นอยู่กับเอา df1 หรือ df2 เป็นตัวตั้ง ถ้าไม่ระบุ ก็คือ inner join เอาเฉพาะ rows ที่ intercept columns มีข้อมูลซ้ำกันมาแสดง, outer join คือรวมกันหมดทุก rows 
+newdf = df1.merge(df2, on= 'name of intercept column') \ .merge(df3, on = 'name of intercept column') \. merge(df4 ...)
+argument on = '' : can input index name for merging with index of different dataframes
+
+joining vertically : pd.concat([df1, df2, df3], ignore_index = False, key = (['', '', '']), sort = True)  
+    ignore_index = False หมายถึง rows ของตารางใหม่ที่มา join ก็ใช้ index เดิมของมัน
+    สามารถเพิ่ม argument join = 'inner' เพื่อให้เป็น inner join ได้ (แสดงแต่ columns ที่ทุก df มีเหมือนกัน)
+pd.merge_ordered(df_left, df_right, left_on = '', right_on = '', how = '')
+
+
+
+                                                            ----------Data visualization----------
+
+
+style
+    sns.set(font_scale = 1.0)
+    sns.set_style(['white', 'dark', 'whitegrid', 'darkgrid', 'ticks'])
+    sns.despine(left = True) : remove y axis of left side
+
+custom palettes 
+    display color palettes : sns.palplot(sns.color_palette('Purple', 8))
+    Sequential colors : sns.color_palette('Blues', 12) 
+    Diverging colors : sns.color_palette('BrBG', 12) 
+    reverse colors : sns.color_palette('BrBG', 12)[::-1],  sns.dark_palette("#69d", 6)[5:1:-1]
+
+timeseries : lineplot
+    ax = df.plot(x = 'year', y = 'value', label = 'groupA')
+    clinic_2.plot(x = 'year', y = 'value', label = 'groupB', ax = ax)
+    plt.show()
+    or
+    ax = sns.lineplot(data = , x = '', y = '', hue = '', estimator = 'sum/mean/median') 
+        from matplotlib.ticker import PercentFormatter : กรณีที่แกน y เป็นอัตราส่วน และต้องการปรับให้เป็น % 
+        ax.yaxis.set_major_formatter(PercentFormatter(1.0))
+
+one variable : distribution plot     
+    sns.displot(data = df, x = '', kind = 'hist', kde = True, fill = True, bins = , alpha = 0.5) : แสดงทั้ง histogram & kde plot
+two variables : regression plot
+    sns.lmplot(data = df, x = '', y = '', ci = 95, hue = '', col = '', row = '', col_order = ['', '',...], scatter_kws = {'alpha' : 0.5}, line_kws = {'color' : 'orange'})
+        lowess = True : เพิ่มความ smooth ให้ line, aspect = 2 : ให้อัตราส่วนของกราฟเป็นแนวนอน 2 ต่อ 1
+custom seaborn with matplotlib 
+    fig, (ax0, ax1) = plt.subplots(nrows = 1, ncols =2, sharey = True) : sharey =  all subplots will share the same y-axis scale
+    sns.histplot(ax = ax0)
+    sns.histplot(ax = ax1)
+    ax1.set_xlabel()
+    ax1.set_ylabel()
+    ax1.set_title()
+    ax1.set(xlabel = '', xlim = (0, 10000))
+    ax1.axvline(x = 5000, label = '', linestyle = '--', color = '')
+    ax1.legend()
+
+categorical plot types : either x or y axis may be categorical variables
+    show each individual observations : stripplot / swarmplot
+    show abstract representations : boxplot / violinplot / boxenplot
+        sns.boxplot(data =, x = '', y = '', hue = '', whis = [0,100], order = ['', '', ''])
+            # ถ้าใส่ argument showmeans = True : ค่า mean ของแต่ละ category คือค่า slope coefficient 
+    statistical estimates : countplot / barplot / pointplot 
+        sns.countplot(data =, x = '', hue = '', , order = ['', '', ''])
+        sns.barplot(data =, x = '', y = '', hue = '', , order = ['', '', ''], CI = True, estimator = mean/median) : Bar plot can show 95% CI
+        sns.pointplot(data =, x = '', y = '', hue = '', , order = ['', '', ''], join = True, CI = True, estimator = mean/median, dodge = True) : Bar plot can show 95% CI
+            dodge = True คือให้ hue ของแต่ละ pointplot ไม่เหลื่อมกัน
+
+    matrix plot : 
+        table = pd.crosstab(df['cat1'], df['cat2'], values = df['continuous variables'], aggfunc = 'mean').round(0)
+        sns.heatmap(table, annot = True, fmt = 'd', cmap = 'YlGnBu', cbar = False, linewidths = .5)
+            cmap = color palette, cbar = color bar, fmt = display value in cells as integer
+        sns.heatmap(df[['', '', '', '']].corr(), cmap = 'YlGnBu')
+            plt.xticks(rotation = 90)
+
+regression plot       
+    sns.regplot(x = 'Y_test', y = 'Y_predict') : order = 2 กรณีเป็น polynomial regression model
+        x_bins = แบ่งกลุ่มในข้อมูลเป็น bins โดย estimator เป็น mean 
+    sns.residplot(x = 'Y_test', y = 'Y_predict') : order = 2 กรณีเป็น polynomial regression model
+        horizontal line at y=0 to indicate the ideal case where the predicted values match the observed values perfectly
+        useful for assessing the goodness-of-fit of a linear regression model and detecting potential violations of its assumptions
+
+joint grid : plot 2 plot ลงบนภาพเดียว โดยจะมี scatterplot & histogram ontop
+    g = sns.JointGrid(data = df, x = '', y ='') : X & Y เป็น continuous variables
+    g.plot(sns.regplot, sns.histplot) or more advanced
+    g.plot_joint(sns.kdeplot)
+    g.plot_marginals(sns.kdeplot, shade = True)
+joint plot : more easier than joint grid
+    sns.jointplot(data =df, x = '', y = '', kind = 'hex/scatter/reg/resid/kde') 
+        ถ้า kind = 'reg/resid' ควรใส่ argument order = 2 ถ้าหากหาความสัมพันธ์แบบ polynomial regression
+        example :
+            g = (sns.jointplot(data =df, x = '', y = '', kind = 'scatter').plot_joint(sns.kdeplot))
+
+
+
+
+---------------------------------------------------------------------------------------------------- Date and Time ---------------------------------------------------------------------------------------------------------------------------------------
+
+
+# Creating Date Objects
+from datetime import date
+event = date(1992, 8, 24)
+    event.year # or .month, .day
+    event.weekday()
+
+# math with date
+start = date(2007, 5, 9)
+end = date(2007, 12, 13)
+print((end - start).days)
+
+# Turning dates into strings
+d = date(2017, 11, 5)
+print([d.isoformat()]) --> ['2017-11-05']
+    # Every other format : .strftime('') --> more flexible
+    d.strftime('Year is %Y') --> 'Year is 2017'
+    d.strftime('%Y/%m/%d') --> '2017/11/5' # others : %B = full name of month (e.g. August), %j = number of day in year (e.g. 247)
+
+some_dates = ['2000-01-01', '1999-12-31']
+print(sorted(some_dates)) --> ['1999-12-31', '2000-01-01']
+
+    
+# date & time : 
+from datetime import datetime
+dt = datetime(2017, 10, 1, 15, 50, 25, 600000) # 2017-10-1 15:50:25.600000, เพิ่ม hours, mins, seconds, and milliseconds(up to 1 million) as need
+    dt.isoformat() or df.strftime('%Y-%m-%d %H:%M:%S')
+dt.hour = dt.replace(min = 0, second = 0, microsecond = 0) # 2017-10-1 15:00:00.0
+
+
+# work with duration
+start = datetime()
+end = datetime()
+duration = end - start 
+dutation.total_seconds()
+
+from datetime import timedelta # บวกลบ เวลาที่ต้องการ
+delta = timedelta(weeks = -1, days = 1, seconds = 1) 
+print(start + delta)
+
+
+# pandas 
+df['date'] = pd.to_datetime(df['date'], format = '%Y-%m-%d %H:%M:%S')
+df['duration'] = df['end date'] - df['start date']
+    df['duration'].dt.total_seconds()
+    df['duration'].mean() or
+    df['duration'].sum() / timedelta(days = 91)
+df.groupby('category')['duration_second'].mean()
+df.resample('Y', on = 'date')['Sale'].mean() # หายอดขายเฉลี่ยในแต่ละปี, สามารถใช้ 'M', 'D' ได้ , on = column ที่เป็น datetime
+
+
+---------------------------------------------------------------------------------------------------- Funtion --------------------------------------------------------------------------
+
+# Docstring : Google style
+def count_letter(content, letter):
+
+  """Count the number of times `letter` appears in `content`.
+
+  Args:
+    content (str): The string to search.
+    letter (str): The letter to search for.
+
+  Returns:
+    int
+
+  # Add a section detailing what errors might be raised
+  Raises:
+    ValueError: If `letter` is not a one-character string.
+  """
+
+  if (not isinstance(letter, str)) or len(letter) != 1:
+    raise ValueError('`letter` must be a single character string.')
+  return len([char for char in content if char == letter])
+
+
+# input : *arg = tuples ไม่ทราบจำนวน, **kwarg = dictionary
+def my_function(*args, **kwargs):
+    print("Positional arguments (args):", args)
+    print("Keyword arguments (kwargs):", kwargs)
+
+my_function(1, 2, 3, name="John", age=30)
+# output
+Positional arguments (args): (1, 2, 3)
+Keyword arguments (kwargs): {'name': 'John', 'age': 30}
+
+
+# Don't repeat yourself and Do One Thing (แต่ละ function ควรมีแค่ 1 responsibility)
+# Functions are object : สามารถใส่เข้าไปใน list, dict ได้ , รวมถึงสามารถถูกใส่เป็น argument ของ function ได้, และสามารถเป็น function ซ้อนใน function ได้ รวมถึงสามารถถูก return กลับมาเป็นผลลัพธ์ของ function ได้ด้วย
+
+
+# decorator : modify input, output and function
+# Example : ตั้ง double_args() เป็น decorator
+def double_args(func) :  # decorator สามารถมี argument ของตัวเองได้เหมือนกันนอกจากแค่ มี input เป็น function
+    def wrapper(a, b) :
+        return func(a * 2, b * 2)
+    return wrapper
+
+def multiply(a, b) :
+    return a * b
+
+new_multiply = double_args(multiply)
+new_multiply(1, 5) # 20
+
+# or 
+
+def double_args(func) : 
+    def wrapper(a, b) :
+        return func(a * 2, b * 2)
+    return wrapper
+
+@double_args() # decorator syntax
+def multiply(a, b) :
+    return a * b
+
+new_multiply(1, 5) # 20
+
+# เราจะใช้เมื่อต้องการ repeat decorator ซ้ำๆ 
+
+@ double_args()
+def multiply(a, b) :
+    return a * b
+
+@ double_args()
+def sum(a, b) :
+    return a + b
+
+@ double_args()
+def subtract(a, b) :
+    return a - b
+
+
+
+
+
+
+---------------------------------------------------------------------------------------------------- Survival Analysis -------------------------------------------------------------------------------------------------------------
+
+from lifelines import KaplanMeierFitter, NelsonAalenFitter, CoxPHFitter
+
+
+time = df['time_startDrug_to_event']
+event = df['event']
+
+InterventionGroup = (df['Drug'] >= 1)
+PlaceboGroup = (df['Drug'] == 0)
+
+
+km = KaplanMeierFitter()
+km.fit(time[InterventionGroup], event[InterventionGroup], label = 'Interventional Drug.')
+ax1 = km.plot(ci_show = False)
+
+km.fit(time[PlaceboGroup], event[PlaceboGroup], label = 'Placebo.')
+km.plot(ax=ax1, ci_show = False)
+
+plt.title("Kaplan-Meier Survival Curves for Different Intervention Groups")
+plt.xlabel("Time to Event")
+plt.ylabel("Survival Probability")
+plt.grid(True)
+plt.show()
+
+# Estimate survival probabilities at specific time points : อันนี้จะใช้ได้แค่ predict km.fit group แรก
+time_points = [10, 30, 50]
+survival_probs = km.predict(time_points)
+print(survival_probs)
+
+
+    # Modified plot to cumulative incidence (%) with NelsonAalenFitter : กรณีจะดูจำนวนของ Adverse events ที่เกิดขึ้น
+    na = NelsonAalenFitter()
+    na.fit(time[intervention], event[intervention], label = 'Interventional Drug.')
+    ax1 = na.plot(ci_show = False)
+
+    na.fit(time[placebo], event[placebo], label = 'Placebo.')
+
+    na.plot_cumulative_hazard(ax = ax1, ci_show = False)
+
+    plt.title("Cumulative Incidence of Adverse Events by Different Groups")
+    plt.xlabel('Time to Event')
+    plt.ylabel('Cumulative incidence ratio(%)')
+    plt.grid(True)
+    plt.show()
+
+# Cox-proportional hazard model
+cox = CoxPHFitter()
+cox.fit(df, 'time_startDrug_to_event', event_col = 'event')
+print('The exp(coef) is Hazard Ratio.')
+cox.plot()
+cox.summary
+
+
+
+

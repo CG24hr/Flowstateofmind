@@ -1,0 +1,185 @@
+--------------------------------------------------------------------Data Preprocessing--------------------------------------------------------------------------------------------------
+
+เป็นกระบวนการหลังจาก Data Cleaning & Exploratory Data Analysis(EDA)
+การ EDA ทำให้เราได้ idea ว่าควรจะสร้าง model จาก data แบบไหนถึงเหมาะสม นำมาสู่การเลือกวิธี Preprocessing เพื่อให้ได้ model performance สูงที่สุด
+
+# check data types & null vaues
+
+df.info() 
+df.isna().sum()
+df.notnull().sum()
+
+df[''] = df[''].astype(str/object/float)
+df.dtypes
+
+select เฉพาะ column ที่เป้น numerical data
+    df.select_dtypes(include = ['int', 'float'])
+
+
+df.dropna() เอา row ที่มี NaN ออกทั้งหมด
+df.dropna(subset = ['']) : เลือก column ที่ต้องการ remove NaN values 
+
+
+
+# split data -> reduce overfitting, evaluate performance on a holdout set (ชุดข้อมูลที่ model ไม่เคยเห็นมาก่อนตอน trained)
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 123)
+    argument stratify = y เพื่อ avoid imbalance classification between train and test set กรณีที่ y เป็น categorical data
+
+
+# standardization -> ***transform continuous data to appear normally distributed***, เนื่องจากหลายๆ model มี assumption ว่า training set เป็น normally distributed data
+    การที่นำ non-normally distributed data มา train จะทำให้ model มีความ bias
+        - ใช้กรณีเป็น model in linear space e.g. KNN, linear regression, KMeans 
+        - dataset features have high variance (ซึ่งจะมีผลต่อ distance metrics ของ models)
+        - features are on different scales (เช่นบางอันหลักหน่วย บางอันหลักพัน)
+
+
+    # log normalization : ใช้กับ column ข้อมูลมี high variance มากกว่า column อื่นมากๆ
+    df.var() : เลือก features ที่มี significant high variance
+    df[''] = np.log(df['']) : จะใช้ natural logarithm คือ 2.718 e.g. data = 30 --> ค่า log ที่ได้จะเป็น 3.4
+    df[''].var() : เช็ค variance อีกรอบว่าลดลงไหม
+
+    # scaling : ใช้กรณีแต่ละ column มี variance ต่ำๆเหมือนกัน แต่ข้อมูลเป็นคนละ scale กัน (เช่นบางอันหลักหน่วย บางอันหลักพัน) --> โดยทำให้ชุดของข้อมูลมี mean = 0 & variance = 1
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    df_scaled = pd.DataFrame(scaler.fit_transform(df), columns = df.column) : อย่าลืมเช็ค .var() ทั้งก่อนและหลังทำ
+
+    Example : 
+        from sklearn.neighbors import KNeighborsClassifier
+        from sklearn.model_selection import train_test_split
+        from sklearn.preprocessing import StandardScaler
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, stratify = y, random_state = 123)
+        knn = KNeighborsClassifier()
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+        knn.fit(X_train_scaled, y_train)
+        knn.score(X_test_scaled, y_test)
+
+
+
+
+
+-------------------------------------------------------------------Feature Engineering----------------------------------------------------------------------------------------------------
+
+Creation of new features based on existing features --> improve performance, insight into relationship between features
+** require in-depth knowledge of the dataset that working with
+
+
+# Encoding categorical variables
+
+pandas method
+    df['col_encode'] = df[''].apply(lambda val : 1 if val == 'y' else 0)
+    encode_df = pd.get_dummies(df[''], drop_first = True, prefix = '')
+
+sci-kit learn method
+    from sklearn.preprocessing import LabelEncoder
+    le = LabelEncoder()
+    df['col_encode'] = le.fit_transform(df[''])
+    print(df[['', 'col_encode']])
+
+
+# Engineering numerical features
+
+reduce dimensions : เช่นมี 3 columns เป็น อุณหภูมิเฉลี่ยของ day1, day2, day3 เราอยากย่อให้เหลือ column เดียว คือค่าเฉลี่ยของทั้งสามวัน
+    df['mean_temp'] = df.loc[:, 'day1':'day3].mean(axis = 1)
+
+datetime : extract month from date
+    df['date'] = pd.to_datetime(df['date'])
+    df['month'] df['date].dt.month
+
+เลือกเฉพาะ numerical data เพื่อมาหาความสัมพันธ์ ระหว่าง columns ในการทำ feature selection
+    print(house.dtypes)
+    num_columns = house.select_dtypes(include =  ['int64', 'float64'])
+    sns.heatmap(num_columns.corr())
+
+
+# Feature selection
+    # Removing redundant features : reduce noise when modeling
+        # Linear models assume each feature independence --> should remove statistically correlated features
+        df.corr() : use pearson correlation to find strongly correlated features (coeffient close to -1 or 1) 
+        df.drop(['', ''], axis = 1) : เลือก drop column ที่ strongly correlated with others
+
+    # Dimensionality reduction : is Unsupervised learning method
+        # Linear transformation to uncorrelated space, Captures as much variance as possible in each component
+        ดูรายละเอียดในไฟล์ MLscientist --unsupervised learning--
+
+   
+
+
+# Feature Scaling
+
+    #  MinMaxScaler : เปลี่ยนให้ range ของ numerical features อยู่ระหว่าง 0-1 โดย distribution เหมือนเดิม
+    from sklearn.preprocessing import MinMaxScaler
+    MM_scaler = MinMaxScaler()
+    M_scaler.fit(df[['']])
+    df['scaled'] = MM_scaler.transform(df[['']])
+
+    #  StandardScaler : เปลี่ยนให้ range ของ numerical features มี mean = 0 & S.D. = 1 โดย distribution เหมือนเดิม
+    from sklearn.preprocessing import StandardScaler
+    SS_scaler = StandardScaler()
+    SS_scaler.fit(df[['']])
+    df['scaled'] = SS_scaler.transform(df[['']])
+
+    #  PowerTransformer : เปลี่ยนให้ range ของ numerical features โดย reduce skewness and make the distribution more symmetrical (ให้ใกล้เคียง normal distribution)
+    from sklearn.preprocessing import PowerTransformer
+    pow_trans = PowerTransformer()
+    pow_trans.fit(df[['']])
+    df['log'] = pow_trans.transform(df[['']])
+
+
+# Encoding text
+    df['text'] = df['text'].str.replace('[^a-zA-Z]', ' ') : [a-zA-Z] = all letter characters, [^a-zA-Z] all non letter characters
+    df['text'] = df['text'].str.lower()
+    df['word'] = df['text'].str.split()
+    df['word_count'] = df['text'].str.split().str.len()
+
+
+    # Word count vectorization
+    from sklearn.feature_extraction.text import CountVectorizer
+    cv = CountVectorizer() 
+        arguments -> min_df = 0.2, max_df = 0.8 : คำที่มีสัดส่วนน้อยกว่า 20% และคำที่มีสัดส่วนมากกว่า 80% ของข้อความทั้งหมดในช่องนั้น จะถูกตัดทิ้ง
+            control the vocabulary size and the inclusion of terms that are too common or too rare. 
+            This can be useful for filtering out terms that might not carry much meaningful information, such as very common stop words or extremely rare terms that could be noise.
+    cv_matrix = cv.fit_transform(df['text'])
+    print(cv.get_feature_names())
+
+    cv_matrix = cv_matrix.toarray()
+    print(cv_matrix.shape)
+
+    cv_df = pd.DataFrame(cv_matrix, columns = cv.get_feature_names()).add_prefix('Counts_')
+    print(cv_df.sum().sort_values(ascending = False).head()) : เพื่อดู most common words
+    new_df = pd.concat([df, cv_df], axis = 1, sort = False)
+
+
+
+     # text vectorization 
+        # statistical measure that evaluates the importance of each word in a document relative to a collection of documents. 
+        # It gives more weight to words that appear frequently in a specific document but infrequently in the entire collection of documents
+        # formula = (count of word occurances / total words in document) / log(number of documents that the word is in / total number of documents)
+
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    vec = TfidfVectorizer(max_features = 100, stop_words = 'english')
+        # Arguments เหล่านี้้มีบน CountVectorizer เหมือนกัน
+        max_features : เอามาแค่ word ที่มีสัดส่วนมากที่สุด 100 คำ
+        stop_words** : 'english' ตัดคำภาษาอังกฤษที่เป็น common words แต่ไม่มีนัยสำคัญต่อความหมายของข้อความ including "the," "and," "is," "of," "in," "a," and so
+        ngram_range : (2, 2) เลือกเฉพาะ bi-grams word เช่น american people, best ability, beloved country
+            (1, 3) : เลือกทั้ง mono-gram (e.g. happy), bi-grams (e.g. not happy), และ tri-grams (e.g. not never happy)
+    tfidf_matrix = vec.fit_transform(df['document'])
+
+    # Print the vocabulary (unique words) learned by the vectorizer
+    print("Vocabulary:")
+    print(vec.get_feature_names())
+
+    # Print the shape of the TF-IDF matrix
+    print("TF-IDF Matrix Shape:")
+    print(tfidf_matrix.shape)
+
+    # Convert the TF-IDFtfidf_matrix.toarray()
+    print("TF- matrix to a dense array for visualization (optional) จากนั้นก็เอามาแปลงเป้น df แล้วไป concatenate กับ df เดิม
+    dense_tfidf_matrix = IDF Matrix (Dense Array):")
+    print(dense_tfidf_matrix)
+
+    dense_tfidf_matrix = pd.DataFrame(dense_tfidf_matrix, columns = vec.get_feature_names_out()).add_prefix('TFIDF_')
+    pd.concat([df, dense_tfidf_matrix], axis = 1)
