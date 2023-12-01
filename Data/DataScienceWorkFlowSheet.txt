@@ -359,7 +359,7 @@ tools :
          padjust = 'none' แสดง p-value of two levels being compared on each row.
          padjust = 'bonf' แสดง p-value of two levels being compared on each row ที่ได้รับ bonferroni correction :
             correct the probability of making at least one Type I error (alpha error : H0 is True, but the test reject H0) across all tests ซึ่งเกิดขึ้นได้ใน multiple comparisons อาจจะมีบางคู่ไม่เกี่ยวข้องกัน แต่พบความสัมพันธ์โดยบังเอิญ
-proportional test : chi-square test
+two proportional test : chi-square test
     chi2 statistic = z-score (of difference between frequency of each category) ** 2
     null hypothesis : There is no significant association or relationship between the two categorical variables. In other words, the two variables are independent of each other.
         in the context of baseline characteristic comparisons in clinical trials : we need p-value > 0.05 or accept H0 : There is no significant difference in the baseline categorical frequency of the intervention and control groups..
@@ -381,6 +381,7 @@ non-parametric tests :
 
     # CALCULATE CONFIDENTIAL INTERVAL IN CONTEXT OF MEASUREMENT IN EPIDEMIOLOGY
 create table : pd.crosstab(df['exposure category'], df['outcome category'])
+a = table.iloc[0, 0], b = table.iloc[0, 1], c = table.iloc[1, 0], d = table.iloc[1, 1]
 alpha = 0.05
 z_alpha = stats.norm.ppf(1-(alpha/2)) = 1.96
 mean difference : 
@@ -434,7 +435,7 @@ display : plt.show()
 
     # PLOT 
 line plot : sns.lineplot(data =, x = 'time', y = 'value', hue = 'categorical column') : จัดรูปแบบ dataframe ให้อยู่ในรูปแบบ df.groupby('time')['value'].agg() & unstack ก่อน
-distribution plot : sns.displot(data = df, x = '', hue = 'group', kind = 'hist', kde = True, fill = True, bins = , alpha = 0.5)
+distribution plot : sns.displot(data = df, x = '', hue = 'group', kind = 'hist', kde = True, fill = True, multiple = 'stack', bins = , alpha = 0.5)
 regression plot :  
     sns.lmplot(data = df, x = '', y = '', ci = 95, hue = '', col = '', row = '', col_order = ['', '',...], scatter_kws = {'alpha' : 0.5, 'color' : 'blue'}, line_kws = {'color' : 'red'}) : lowess = True กรณี non-linear relationship
     sns.regplot(x = 'Y_test', y = 'Y_predict') : x_bins = แบ่งกลุ่มในข้อมูลเป็น bins โดย estimator เป็น mean, order = n กรณี polynomial or non linear regression 
@@ -678,7 +679,7 @@ voting classifier :
                    ('SVC', svc_best), 
                    ('DecisionTreeClassifier', tree_best)]
 
-    vc = VotingClassifier(estimators = classifiers)
+    vc = VotingClassifier(estimators = classifiers, voting = 'soft') : voting = 'soft' คือทำให้สามารถคิด probability ได้
     vc.fit(X_train, y_train)
     y_pred = vc.predict(X_test)
     print('voting classifier score :', accuracy_score(y_test, y_pred))
@@ -750,8 +751,8 @@ for name, model in ensembles.items() :
     plt.ylabel('true positive rate')
     plt.title('ROC curve of {}'.format(name))
     plt.show()
-    roc_auc_score(y_test, y_pred_probs)
-
+    roc_auc_score = roc_auc_score(y_test, y_pred_probs)
+    print('area under ROC curve :', roc_auc_score)
 
 
 ---------------------------------------------------------------------------------UNSUPERVISED LEARNING----------------------------------------------------------------------------------
