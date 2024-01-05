@@ -611,7 +611,7 @@ support vector machine : add argument probablity = True to model() function
         - kernel = 'rbf' or radial basis function
         - larger gamma : lead to more complex and overfitting
         - smaller gamma : lead to more smoother boundaries and reduce overfitting
-    - hyperparameters for cross validation : {'kernel':['linear', 'rbf'], 'C':[0.1, 1.0, 10], 'gamma':np.linspace(0.00001, 10, 7)}
+    - hyperparameters for cross validation : {'kernel':['linear', 'rbf'], 'C':[0.1, 1.0, 10], 'gamma':np.linspace(0.00001, 10, 7), 'probability':True}
 
 
 
@@ -738,7 +738,7 @@ plt.ylabel('accuracy score')
 plt.xlabel('ensemble models')
 plt.show()
 
-กรณี evalute classifier models จะมี roc curve ร่วมด้วย
+กรณี evalute classifier models จะมี roc curve ร่วมด้วย only binary classification problems
 for name, model in ensembles.items() : 
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
@@ -790,10 +790,10 @@ visualize :
     x = samples[:, m] : เลือก m, n column มาเพื่อ visualize
     y = samples[:, n] 
     plt.scatter(x, y, c = labels, alpha = 0.5, cmap = 'viridis') : visualize การจัดกลุ่มระหว่าง feature m & n
-    centroids = model.cluster_centers_ # แสดงผล centroids ของแต่ละ cluster 
+    centroids = km.cluster_centers_ # แสดงผล centroids ของแต่ละ cluster 
     centroids_x = centroids[:, m]       
     centroids_y = centroids[:, n]
-    plt.scatter(centroids_x, centroids_y, marker = 'D', s = 50)
+    plt.scatter(centroids_x, centroids_y, marker = 'D', s = 50, c = 'Red')
     plt.show()
 
 
@@ -830,7 +830,7 @@ tsne = TSNE(learning_rate = 100) : learning rate should be between 50 and 200
 transformed = tsne.fit_transform(samples)
 xs = transformed[:, 0] : first dimension
 ys = transformed[:, 1] : second dimension
-plt.scatter(xs, ys, alpha = 0.5)
+plt.scatter(xs, ys, c = labels, alpha = 0.5)
 for xs, ys, labels in zip(xs, ys, labels) : labels ที่ได้จาก clustering techniques
     plt.annotate(labels, (xs, ys), fontsize = 5, alpha = 0.75)
 plt.show() 
@@ -852,7 +852,7 @@ find variance or eigenvalues :
     plt.show()
 visualize :
     - select two most significant higher variance components
-    plt.scatter(xs, ys, c = samples['cluster'], alpha = 0.5)
+    plt.scatter(samples.loc[:, 'feature'], samples.loc[:, 'feature'], c = samples['cluster'], alpha = 0.5, cmap = 'spring') : เลือก 2 feature ที่จะมา plot เป็น x & y axis
     mean = pca.mean_ : ค่าเฉลี่ยของแต่ละ features
     first_pc = pca.components_[0, :] : show coefficients or eigenvector of each feature ในการสร้าง first component โดยจะเป็น numpy 2D arrays [[, ], [, ]] มีจำนวน rows ตามจำนวน components และ จำนวน columns ตาม features
     second_pc = pca.components_[1, :] : show coefficients or eigenvector of each feature ในการสร้าง second component
@@ -860,8 +860,8 @@ visualize :
     plt.arrow(mean[0], mean[1], second_pc[0], second_pc[1], color = 'red', width = 0.01)
     plt.axis('equal')
     plt.title('principle (first two) components of first two features of sample. (red arrows)')
-    plt.xlabel('first Component')
-    plt.ylabel('second Component')
+    plt.xlabel('feature')
+    plt.ylabel('feature')
     plt.show()
 
 
@@ -910,7 +910,7 @@ image pre-processing :
     - ปรับขนาดให้ทุกรูปมี pixel เท่ากัน แล้ว pixel ทั้งหมดของแต่ละรูป มาเรียงต่อกันเป็น row เดียว พร้อมระบุ color code แต่ละ pixel ซึ่งจะเป็นตัวแปรต้น พร้อมกับ class ของรูปภาพ ซึ่งเป็นตัวแปรตาม
 
 fit model : 
-    model = MLPRegressor(hidden_layer_size(number of nodes in first layer, number of nodes in second layer), activation = '', learning_rate_init = ) or MLPClassifier()
+    model = MLPRegressor(hidden_layer_sizes = (number of nodes in first layer, number of nodes in second layer), activation = '', learning_rate_init = ) or MLPClassifier()
         activation : activation function ['relu', 'tanh', 'logistic']
         learning_rate_init = learning rate for regression [0.001, 0.01, 0.1], learning rate for classification [1, 5, 10]
     model.fit(X_train, y_train)
