@@ -435,7 +435,7 @@ display : plt.show()
 
     # PLOT 
 line plot : sns.lineplot(data =, x = 'time', y = 'value', hue = 'categorical column') : จัดรูปแบบ dataframe ให้อยู่ในรูปแบบ df.groupby('time')['value'].agg() & unstack ก่อน
-distribution plot : sns.displot(data = df, x = '', hue = 'group', kind = 'hist', kde = True, fill = True, multiple = 'stack', bins = , alpha = 0.5)
+distribution plot : sns.displot(data = df, x = '', hue = 'group', kind = 'hist/kde', kde = True, fill = True, multiple = 'stack/dodge', bins = , alpha = 0.5)
 regression plot :  
     sns.lmplot(data = df, x = '', y = '', ci = 95, hue = '', col = '', row = '', col_order = ['', '',...], scatter_kws = {'alpha' : 0.5, 'color' : 'blue'}, line_kws = {'color' : 'red'}) : lowess = True กรณี non-linear relationship
     sns.regplot(x = 'Y_test', y = 'Y_predict') : x_bins = แบ่งกลุ่มในข้อมูลเป็น bins โดย estimator เป็น mean, order = n กรณี polynomial or non linear regression 
@@ -512,6 +512,35 @@ cox proportional hazard model :
 
 
 
+# LINEAR MIXED MODEL 
+ใช้พิสูจน์สมมติฐาน ความแตกต่างระหว่างสองกลุ่มทดลอง ตามระยะเวลาที่ follow-up 
+ตัวอย่างตารางดูจาก slide data collection ของ research proposal
+
+    # create subject for random effect
+subject_ids = []
+for i in range(len(df)):
+    subject_ids.append(i // 3 + 1)
+df['Subject'] = subject_ids
+data['Subject'] = np.arange(0, len(data)+1)
+
+formula = 'Score ~ Time + Age + Gender + Intervention + (1 | Subject)' or + other confounding factors
+lmm = smf.mixedlm(formula, data, groups=data['Subject']).fit()
+print(lmm.summary())
+
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=df, x='Time', y='Score', hue='Intervention', style = 'Gender', markers=True, ci=None, palette='Set1')
+plt.title('Score Over Time by Age, Gender, and Intervention')
+plt.xlabel('Time')
+plt.ylabel('Score')
+plt.legend(title='Group')
+plt.show()
+
+plt.figure(figsize=(12, 6))
+sns.boxplot(data=data, x='Time', y='Score', hue='Intervention', palette='Set2')
+plt.title('Distribution of Scores by Intervention and Time')
+plt.xlabel('Time')
+plt.ylabel('Score')
+plt.show()
 
 -------------------------------------------------------------------------------------PRE-PROCESSING--------------------------------------------------------------------------------------
     
