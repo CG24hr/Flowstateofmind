@@ -100,7 +100,7 @@ df[''] = df[''].replace({'oldvalue1':'newvalue1', 'oldvalue2':'newvalue2', ...})
 
     # SORT
 df.sort_values(['', ''], ascending = [True, False]) : จัดเรียงลำดับข้อมูลก่อนหลัง ของ column ที่เลือก
-df.sort_index(axis = 0/1, ascending = True/False)
+df.sort_index(axis = 0/1, ascending = True/False) : จัดเรียงชื่อ row/column สำหรับกรณี 2x2 table
 
 
     # QUERY
