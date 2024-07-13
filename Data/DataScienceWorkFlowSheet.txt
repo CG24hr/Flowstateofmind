@@ -307,7 +307,7 @@ pandas tools :
     pivot : df.pivot_table(values = 'column', index = 'category', columns = 'category', aggfunc = [np.mean, np.median], margins = False, fill_value = 0) : fill_value = 0 หมายถึง fill nan values with 0
     un-pivot : df.melt(id_vars = ['', ''], var_name = '', value_name = '') : ผลลัพธ์ที่ได้ จะเปลี่ยนจาก pivot table มาอยู่ในรูปแบบของ .groupby() ที่ยังไม่ได้ aggregate statistical functions
         id_vars : column ที่คงสถานะไว้
-        var_name : group by catrgorical column
+        var_name : group by categorical column
         value_name : continuous value column
 outlier : การ remove outlier จะช่วยเพิ่มความแม่นยำให้ models
     - quartile method
@@ -326,8 +326,8 @@ outlier : การ remove outlier จะช่วยเพิ่มความ
 - if p-value < alpha : reject null hypothesis : the event that rejects this null hypothesis did not occur by chance.
 - if p-value >= alpha : can not reject null hypothesis : there is no enough evidences to reject null hypothesis.
 - test for normality : scipy.stats.shapiro(df['']) :
-    - if p-value < 0.5 : the data is not normal distritibuted.
-    - if p-value >= 0.5 : the data is normal distributed.
+    - if p-value < 0.05 : the data is not normal distritibuted.
+    - if p-value >= 0.05 : the data is normal distributed.
 - z-score or z-statistics : indicates how many standard deviations the data point's estimate of the "sample mean" is above or below the "mean of the hypothesis or mean of the control group".
     : (mean - mean of the hypothesis) / standard error
 right-tailed test (H1 : sample mean > mean of the hypothesis) : p-value = 1-scipy.stats.norm.cdf(z_score, loc = 0, scale = 1)
