@@ -255,9 +255,9 @@ central limit theorem :
 sampling distribution :
     mean = []
     for i in range(100) : sampling กลุ่มตัวอย่าง 100 ครั้ง จาก population
-        mean.append(population.sample(n = n)['column'].mean()) : โดยแต่ละ sample ขนาดเท่ากับ n 
+        mean.append(population.sample(n = i)['column'].mean()) : โดยแต่ละ sample ขนาดเท่ากับ n 
     plt.hist(mean) : จะเห็นว่ายิ่ง sample size มาก ค่า mean จะเข้าใกล้ population mean
-ิbooststrapping : treat dataset as a sample and use it to build up theoretical population.
+booststrapping : treat dataset as a sample and use it to build up theoretical population.
 booststrap distribution :
     mean_booststrap = [] : สามารถใช้ estimator อื่น นอกจาก mean ได้ ในกรณีของ booststrap distribution เช่น risk ratio, odd ratio, area under ROC curve
     for i in range(100) :0
