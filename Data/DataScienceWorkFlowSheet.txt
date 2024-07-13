@@ -232,7 +232,7 @@ law of large numbers : ถ้าเราทำการทดลองสุ่
 np.random.seed() : บันทึกลำดับการสุ่มนี้ไว้
 np.random.uniform(low = min, high = max, size = n) : random number จาก uniform distribution ที่กำหนด
 np.random.normal(loc = mean, scale = S.D., size = n) : random number จาก normal distribution ที่กำหนด
-ีืuniform distribution :
+uniform distribution :
     scipy.stats.uniform.cdf(value, lowerlimit, upperlimit) : หาพื้นที่ใต้กราฟ หรือ probability ของ value ที่กำหนด ใน uniform distribution, โดยพื้นที่ใต้กราฟทั้งหมดจะเท่ากับ 1 เสมอ
     scipy.stats.uniform.rvs(lowerlimit, upperlimit - lowerlimit, size = n) : generate random number ภายใน uniform distribution ที่กำหนด
 binomial distribution : ใช้ได้ในกรณีที่เป็นการสุ่มแบบใส่คืนเท่านั้น
