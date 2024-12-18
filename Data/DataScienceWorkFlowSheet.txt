@@ -10,6 +10,8 @@ import seaborn as sns
 import scipy.stats as stats
 import pingouin as pg 
 import statsmodels.formula.api as smf
+from statsmodels.tools.tools import add_constant
+from scipy.optimize import linear_sum_assignment
 from lifelines import KaplanMeierFitter, NelsonAalenFitter, CoxPHFitter
 
 # PRE - PROCESSING TOOLS 
@@ -25,7 +27,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import VotingClassifier, BaggingClassifier, RandomForestClassifier, RandomForestRegressor, AdaBoostClassifier, AdaBoostRegressor, GradientBoostingClassifier, GradientBoostingRegressor
-from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix, classification_report, roc_curve, roc_auc_score
+from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix, classification_report, roc_curve, roc_auc_score, pairwise_distances
 
 # UNSUPERVISED LEARNING TOOLS
 from sklearn.cluster import KMeans
@@ -173,7 +175,7 @@ sentimental analysis :
     df[''] = df[df[''].str.len() > number of characters] : filter rows ที่ไม่น่าจะใช่ประโยค แต่อาจจะเป็นแค่คำ หรือ วลี ออกไป
     df[''] = df[''].str.replace('[^a-zA-Z]', ' ') : replace all non letter characters with space, [a-zA-Z] == all letter characters, can input other character lists such as [aeiou]
     df[''] = df[''].str.split(r'[@|#|,|\s+]') : split ประโยคเป็น word ใส่ใน list
-        wordcount = df[''].explode().value_counts(normalilze = True) : หา common words ใน column จาก list ที่ได้ split word ออกมา
+        wordcount = df[''].explode().value_counts(normalize = True) : หา common words ใน column จาก list ที่ได้ split word ออกมา
     df[''] = df[''].apply(lambda x = x[0]) : เลือกมาเฉพาะ คำแรก ใน list   
 miss spelling : example 'united states'
     df[df[''].str.contains('united')] : ตรวจสอบว่ามีคำที่ต้องสงสัยว่าสะกดผิดไหม 
@@ -307,7 +309,7 @@ pandas tools :
     pivot : df.pivot_table(values = 'column', index = 'category', columns = 'category', aggfunc = [np.mean, np.median], margins = False, fill_value = 0) : fill_value = 0 หมายถึง fill nan values with 0
     un-pivot : df.melt(id_vars = ['', ''], var_name = '', value_name = '') : ผลลัพธ์ที่ได้ จะเปลี่ยนจาก pivot table มาอยู่ในรูปแบบของ .groupby() ที่ยังไม่ได้ aggregate statistical functions
         id_vars : column ที่คงสถานะไว้
-        var_name : group by catrgorical column
+        var_name : group by categorical column
         value_name : continuous value column
 outlier : การ remove outlier จะช่วยเพิ่มความแม่นยำให้ models
     - quartile method
@@ -443,9 +445,9 @@ categorical plot : either x or y axis may be categorical variables
     sns.boxplot(data =, x = '', y = '', hue = '', whis = [0,100], order = ['', '', '']) 
     sns.violinplot(data =, x = '', y = '', hue = '', whis = [0,100], order = ['', '', '']) 
 statistical estimation plot : 
-    sns.countplot(data =, x = 'categorical column', hue = '', , order = ['', '', '']) : นับจำนวน categorical data
-    sns.barplot(data =, x = 'categorical column', y = 'continuous column', hue = '', , order = ['', '', ''], CI = True, estimator = mean/median)
-    sns.pointplot(data =, x = 'categorical column', y = 'continuous column', hue = '', , order = ['', '', ''], join = True, CI = True, estimator = mean/median, dodge = True) : dodge argument คือให้ hue ของแต่ละ categorical ไม่เหลื่อมกัน
+    sns.countplot(data =, x = 'categorical column', hue = '', order = ['', '', '']) : นับจำนวน categorical data
+    sns.barplot(data =, x = 'categorical column', y = 'continuous column', hue = '', order = ['', '', ''], CI = True, estimator = mean/median)
+    sns.pointplot(data =, x = 'categorical column', y = 'continuous column', hue = '', order = ['', '', ''], join = True, CI = True, estimator = mean/median, dodge = True) : dodge argument คือให้ hue ของแต่ละ categorical ไม่เหลื่อมกัน
 custom seaborn with matplotlib :
     fig, (ax0, ax1) = plt.subplots(nrows = , ncols =, figsize = (, ),sharey = True) : sharey =  all subplots will share the same y-axis scale
     sns.histplot(ax = ax0) : can use with other plot types
@@ -466,7 +468,7 @@ matrix plot :
         sns.heatmap(df[['', '', '', '']].corr(), cmap = 'YlGnBu') 
 
 
-# SURVIVAL ANALYSIS
+# SURVIVAL ANALYSIS : query เฉพาะ columns ที่เป็นตัวแปรที่สนใจ และเปลี่ยน string datatype เป็น integer or float หมดแล้ว
 
 time = df['time_startdrug_to_event']
 event = df['event']
@@ -512,20 +514,20 @@ cox proportional hazard model :
 
 
 
-# LINEAR MIXED MODEL 
+# LINEAR MIXED MODEL : query เฉพาะ columns ที่เป็นตัวแปรที่สนใจ และเปลี่ยน string datatype เป็น integer or float หมดแล้ว
+
+เปลี่ยนจาก format dataframe มาตรฐานที่มี continuous outcome ของ different time points เป็น columns แยกกัน มารวมกันเป็น column เดียว
+data = pd.melt(data, id_vars = ['subject_id', 'treatment_group'], value_vars = ['columnT0', 'columnT1', 'columnT2'], var_name = 'newcolumn_time_point', value_name = 'score')
+
 ใช้พิสูจน์สมมติฐาน ความแตกต่างระหว่างสองกลุ่มทดลอง ตามระยะเวลาที่ follow-up 
 ตัวอย่างตารางดูจาก slide data collection ของ research proposal
 
     # create subject for random effect
-subject_ids = []
-for i in range(len(df)):
-    subject_ids.append(i // 3 + 1)
-df['Subject'] = subject_ids
-data['Subject'] = np.arange(0, len(data)+1)
+ใช้ column subject_id ของ raw data
 
 formula = 'Score ~ Time + Age + Gender + Intervention + (1 | Subject)' or + other confounding factors
 lmm = smf.mixedlm(formula, data, groups=data['Subject']).fit()
-print(lmm.summary())
+print(lmm.summary()) : Coefficient คือ mean different เทียบกับ baseline T0 เลย
 
 plt.figure(figsize=(12, 6))
 sns.lineplot(data=df, x='Time', y='Score', hue='Intervention', style = 'Gender', markers=True, ci=None, palette='Set1')
@@ -541,6 +543,37 @@ plt.title('Distribution of Scores by Intervention and Time')
 plt.xlabel('Time')
 plt.ylabel('Score')
 plt.show()
+
+
+
+
+
+# PROPENSITY SCORE MATCHING : ใช้กับ observational studies (cohort) 
+เป็นการใช้ Logistic regression แต่ให้ Y เป็น exposure และให้ X เป็น confounding factors(baseline characteristics) ที่เราต้องการจะให้มัน balance กันมากที่สุดระหว่างสองกลุ่ม
+คำนวน propensity score ของแต่ละบุคคลออกมา ซึ่งคะแนนที่ใกล้กัน จะสะท้อนถึง coviariates ที่คล้ายคลึงกัน
+และ match กันระหว่าง exposed & non-exposed group จะได้ subset ของ samples ออกมา (จำนวน n จะน้อยลง แต่ข้อมูลจะ balance กันมากขึ้น)
+
+exposure = data['exposure']
+covariates = fall[['coviariate_1', 'covariate_2']]
+
+covariates = add_constant(covariates)
+logit_model = LogisticRegression()
+logit_model.fit(covariates, exposure)
+data['propensity_score'] = logit_model.predict_proba(covariates)[:, 1]
+
+
+exposed = data[data['exposure'] == 1]
+non_exposed = data[data['exposure'] == 0]
+distance_matrix = pairwise_distances(exposed[['propensity_score']], non_exposed[['propensity_score']], metric='euclidean')
+row_indices, col_indices = linear_sum_assignment(distance_matrix)
+
+matched_exposed = exposed.iloc[row_indices]
+matched_non_exposed = non_exposed.iloc[col_indices]
+
+matched_data = pd.concat([matched_exposed, matched_non_exposed])
+matched_data # ได้ข้อมูลชุดใหม่ที่มีความ balance กันมากขึ้น (เสมือนหยิบกลุ่มตัวอย่าง ออกมาจากกลุ่มเดิม)
+
+
 
 -------------------------------------------------------------------------------------PRE-PROCESSING--------------------------------------------------------------------------------------
     
