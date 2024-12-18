@@ -102,7 +102,7 @@ df[''] = df[''].replace({'oldvalue1':'newvalue1', 'oldvalue2':'newvalue2', ...})
 
     # SORT
 df.sort_values(['', ''], ascending = [True, False]) : จัดเรียงลำดับข้อมูลก่อนหลัง ของ column ที่เลือก
-df.sort_index(axis = 0/1, ascending = True/False)
+df.sort_index(axis = 0/1, ascending = True/False) : จัดเรียงชื่อ row/column สำหรับกรณี 2x2 table
 
 
     # QUERY
@@ -234,7 +234,7 @@ law of large numbers : ถ้าเราทำการทดลองสุ่
 np.random.seed() : บันทึกลำดับการสุ่มนี้ไว้
 np.random.uniform(low = min, high = max, size = n) : random number จาก uniform distribution ที่กำหนด
 np.random.normal(loc = mean, scale = S.D., size = n) : random number จาก normal distribution ที่กำหนด
-ีืuniform distribution :
+uniform distribution :
     scipy.stats.uniform.cdf(value, lowerlimit, upperlimit) : หาพื้นที่ใต้กราฟ หรือ probability ของ value ที่กำหนด ใน uniform distribution, โดยพื้นที่ใต้กราฟทั้งหมดจะเท่ากับ 1 เสมอ
     scipy.stats.uniform.rvs(lowerlimit, upperlimit - lowerlimit, size = n) : generate random number ภายใน uniform distribution ที่กำหนด
 binomial distribution : ใช้ได้ในกรณีที่เป็นการสุ่มแบบใส่คืนเท่านั้น
@@ -259,10 +259,10 @@ sampling distribution :
     for i in range(100) : sampling กลุ่มตัวอย่าง 100 ครั้ง จาก population
         mean.append(population.sample(n = n)['column'].mean()) : โดยแต่ละ sample ขนาดเท่ากับ n 
     plt.hist(mean) : จะเห็นว่ายิ่ง sample size มาก ค่า mean จะเข้าใกล้ population mean
-ิbooststrapping : treat dataset as a sample and use it to build up theoretical population.
+booststrapping : treat dataset as a sample and use it to build up theoretical population.
 booststrap distribution :
     mean_booststrap = [] : สามารถใช้ estimator อื่น นอกจาก mean ได้ ในกรณีของ booststrap distribution เช่น risk ratio, odd ratio, area under ROC curve
-    for i in range(100) :0
+    for i in range(100) :
         mean_booststrap.append(np.mean(df.sample(frac = 1, replace =True)['continuous']))
     plt.hist(mean_booststrap)
 booststrap distribution mean :
@@ -328,8 +328,8 @@ outlier : การ remove outlier จะช่วยเพิ่มความ
 - if p-value < alpha : reject null hypothesis : the event that rejects this null hypothesis did not occur by chance.
 - if p-value >= alpha : can not reject null hypothesis : there is no enough evidences to reject null hypothesis.
 - test for normality : scipy.stats.shapiro(df['']) :
-    - if p-value < 0.5 : the data is not normal distritibuted.
-    - if p-value >= 0.5 : the data is normal distributed.
+    - if p-value < 0.05 : the data is not normal distritibuted.
+    - if p-value >= 0.05 : the data is normal distributed.
 - z-score or z-statistics : indicates how many standard deviations the data point's estimate of the "sample mean" is above or below the "mean of the hypothesis or mean of the control group".
     : (mean - mean of the hypothesis) / standard error
 right-tailed test (H1 : sample mean > mean of the hypothesis) : p-value = 1-scipy.stats.norm.cdf(z_score, loc = 0, scale = 1)
