@@ -468,6 +468,27 @@ matrix plot :
         sns.heatmap(df[['', '', '', '']].corr(), cmap = 'YlGnBu') 
 
 
+# ROC 
+
+auc = roc_auc_score(df['gold_standard'], df['screening_test']) : screening_test เป็น continuous variable
+print('Area under ROC curve :', auc)
+
+y_true = df['gold_standard']
+y_scores = df['screening_test']
+
+fpr, tpr, thresholds = roc_curve(y_true, y_scores)
+
+Compute Youden's J statistic (sensitivity + specificity - 1) : หา optimal value ของ screening test ที่ ให้ sens & spec สูงสุด
+    youden_j = tpr - fpr
+    best_index = np.argmax(youden_j)
+    best_threshold = thresholds[best_index]
+
+    print(f'Best threshold (most discrimination power): {best_threshold:.4f}')
+    print(f'Sensitivity (TPR): {tpr[best_index]:.4f}')
+    print(f'Specificity: {1 - fpr[best_index]:.4f}')
+
+
+
 # SURVIVAL ANALYSIS : query เฉพาะ columns ที่เป็นตัวแปรที่สนใจ และเปลี่ยน string datatype เป็น integer or float หมดแล้ว
 
 time = df['time_startdrug_to_event']
