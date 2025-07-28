@@ -491,8 +491,11 @@ Compute Youden's J statistic (sensitivity + specificity - 1) : หา optimal va
 
 # SURVIVAL ANALYSIS : query เฉพาะ columns ที่เป็นตัวแปรที่สนใจ และเปลี่ยน string datatype เป็น integer or float หมดแล้ว
 
-time = df['time_startdrug_to_event']
 event = df['event']
+df['time_startdrug_to_event'] = ESRD['time_startdrug_to_event'].replace({'none': observed time})
+
+time = df['time_startdrug_to_event'] 
+event = df['event'] : หาก event เป็น 0 ก็ให้ใส่ time_startdrug_to_event เป็นจำนวนเวลาที่ observe เช่น 6 เดือน
 
 intervention_group = (df['drug'] >= 1)
 control_group = (df['drug'] == 0)
@@ -566,6 +569,20 @@ plt.ylabel('Score')
 plt.show()
 
 
+# Generalized Linear Model : กรณีที่ตัวแปรตามเป็น continuous variables แต่ เป็น non-normally distributed data และ ไม่มีเวลามาเกี่ยวข้อง
+สามารถเปลี่ยน coefficient เป็น % reduction ได้ด้วย 
+
+import statsmodels.api as sm   
+
+model = smf.glm(
+    'investigate_treatment_cost ~ age + GFR_first + UC + polypharmacy + CVD + ACP_timing',
+    data=ESRD,
+    family=sm.families.Gamma(link=sm.families.links.log())
+)
+result = model.fit()
+
+# Print the summary
+print(result.summary())
 
 
 
