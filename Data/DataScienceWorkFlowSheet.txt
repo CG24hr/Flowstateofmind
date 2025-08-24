@@ -27,7 +27,9 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC 
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import VotingClassifier, BaggingClassifier, RandomForestClassifier, RandomForestRegressor, AdaBoostClassifier, AdaBoostRegressor, GradientBoostingClassifier, GradientBoostingRegressor
-from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix, classification_report, roc_curve, roc_auc_score, pairwise_distances
+from sklearn.metrics import mean_squared_error, accuracy_score, confusion_matrix, classification_report, roc_curve, roc_auc_score, pairwise_distances, brier_score_loss
+from sklearn.calibration import calibration_curve
+
 
 # UNSUPERVISED LEARNING TOOLS
 from sklearn.cluster import KMeans
@@ -491,7 +493,6 @@ Compute Youden's J statistic (sensitivity + specificity - 1) : หา optimal va
 
 # SURVIVAL ANALYSIS : query เฉพาะ columns ที่เป็นตัวแปรที่สนใจ และเปลี่ยน string datatype เป็น integer or float หมดแล้ว
 
-event = df['event']
 df['time_startdrug_to_event'] = ESRD['time_startdrug_to_event'].replace({'none': observed time})
 
 time = df['time_startdrug_to_event'] 
@@ -853,6 +854,37 @@ for name, model in ensembles.items() :
     plt.show()
     roc_auc_score = roc_auc_score(y_test, y_pred_probs)
     print('area under ROC curve :', roc_auc_score)
+
+
+
+    # Calibration Assessment : ดูว่า predict proba (ค่าความน่าจะเป็นที่ model ทำนาย) สอดคล้องกับ y_test (ความเป็นจริง) ขนาดไหน
+
+- Calibration plot
+หา predict_proba ของแต่ละ model 
+    y_prob_modelA = modelA.predict_proba(X_test)[:, 1]
+    y_prob_modelB = modelB.predict_proba(X_test)[:, 1]
+Calibration curve
+    prob_true_modelA, prob_pred_modelA = calibration_curve(y_test, y_prob_modelA, n_bins=10)
+    prob_true_modelB, prob_pred_modelB = calibration_curve(y_test, y_prob_modelB, n_bins=10)
+    
+    plt.figure(figsize=(7,7))
+    plt.plot([0,1],[0,1], "k--", label="Perfectly calibrated (ideal line)")
+    plt.plot(prob_pred_modelA, prob_true_modelA, marker="o", label="model A")
+    plt.plot(prob_pred_modelB, prob_true_modelB, marker="s", label="model B")
+
+    plt.xlabel("Predicted probability")
+    plt.ylabel("Observed frequency")
+    plt.title("Calibration Plot")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+- Brier score : วัดความคลาดเคลื่อนระหว่าง predicted probability และ outcome จริง, ยิ่งต่ำยิ่งดี
+brier_modelA = brier_score_loss(y_test, y_prob_modelA)
+brier_modelB = brier_score_loss(y_test, y_prob_modelB)
+
+print(f"Brier Score - model A : {brier_modelA:.3f}")
+print(f"Brier Score - model B : {brier_modelB:.3f}")
 
 
 ---------------------------------------------------------------------------------UNSUPERVISED LEARNING----------------------------------------------------------------------------------
