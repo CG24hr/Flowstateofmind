@@ -887,6 +887,40 @@ print(f"Brier Score - model A : {brier_modelA:.3f}")
 print(f"Brier Score - model B : {brier_modelB:.3f}")
 
 
+    # Clinical Utility Assessment : โมเดลนี้มีประโยชน์จริงในเวชปฏิบัติแค่ไหน
+
+- Decision Curva analysis : กราฟที่เปรียบเทียบ “net benefit” ของการใช้โมเดล เทียบกับการตรวจรักษาทุกคน หรือไม่ตรวจรักษาเลย, ใช้ threshold probability (ค่าความเสี่ยงที่แพทย์จะเลือกให้การรักษา)
+
+def net_benefit(y_true, y_prob, threshold):
+    pred = (y_prob >= threshold).astype(int)
+    TP = np.sum((pred==1) & (y_true==1))
+    FP = np.sum((pred==1) & (y_true==0))
+    n = len(y_true)
+    return (TP/n) - (FP/n) * (threshold/(1-threshold))
+
+thresholds = np.linspace(0.01, 0.99, 50)
+nb_modelA = [net_benefit(y_test, prob_modelA, t) for t in thresholds]
+nb_modelB = [net_benefit(y_test, prob_modelB, t) for t in thresholds]
+
+# Treat all และ Treat none
+prev = np.mean(y_test)
+nb_all = [prev - (1-prev)*(t/(1-t)) for t in thresholds]
+nb_none = [0]*len(thresholds)
+
+plt.figure(figsize=(8,6))
+plt.plot(thresholds, nb_modelA, label="model A")
+plt.plot(thresholds, nb_modelB, label="model B")
+plt.plot(thresholds, nb_all, "--", label="Treat All")
+plt.plot(thresholds, nb_none, "--", label="Treat None")
+
+plt.xlabel("Threshold probability")
+plt.ylabel("Net Benefit")
+plt.title("Decision Curve Analysis (DCA)")
+plt.legend()
+plt.grid(True)
+plt.show()
+
+
 ---------------------------------------------------------------------------------UNSUPERVISED LEARNING----------------------------------------------------------------------------------
                                 *** doesn't need to split the data into a training and test set but can perform feature scaling to reduce feature variance & bias ***
                                                           *** the samples dataframe must not have a dependent variable column ***
