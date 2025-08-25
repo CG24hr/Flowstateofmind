@@ -358,6 +358,7 @@ two-tailed test : p-value = 2 * (1 - scipy.stats.t.cdf(t_statistic, df = degree_
 tools : 
     pengouin.ttest(df['groupA']['continuous'], df['groupB']['continuous'], paired = True/False, alternative = 'greater/less/two-sided') 
     pengouin.anova(data = , dv = '', between = '', padjust = 'none') : three or more different groups
+    pengouin.ancova(data = , dv= 'y', covar = 'x', between='group') : anova + adjusted covariates 
     pengouin.pairwise_tests(data = , dv='', between='', padjust='none') : perform multiple pairwise comparisons
          dv = dependent variable continuous column, between = groups
          padjust = 'none' แสดง p-value of two levels being compared on each row.
@@ -544,7 +545,7 @@ cox proportional hazard model :
 เปลี่ยนจาก format dataframe มาตรฐานที่มี continuous outcome ของ different time points เป็น columns แยกกัน มารวมกันเป็น column เดียว
 data = pd.melt(data, id_vars = ['subject_id', 'treatment_group'], value_vars = ['columnT0', 'columnT1', 'columnT2'], var_name = 'newcolumn_time_point', value_name = 'score')
 
-ใช้พิสูจน์สมมติฐาน ความแตกต่างระหว่างสองกลุ่มทดลอง ตามระยะเวลาที่ follow-up 
+ใช้พิสูจน์สมมติฐาน ความแตกต่างระหว่างสองกลุ่มทดลอง ตามระยะเวลาที่ follow-up (ข้อมูลแต่ละชุดไม่เป็นอิสระต่อกัน ซึ่งต่างจาก ANCOVA ที่เป็นอิสระต่อกัน)
 ตัวอย่างตารางดูจาก slide data collection ของ research proposal
 
     # create subject for random effect
@@ -905,34 +906,37 @@ print(f"Brier Score - model B : {brier_modelB:.3f}")
         ไม่รักษาใครเลย
         เส้นตรงที่ศูนย์
 
-def net_benefit(y_true, y_prob, threshold):
-    pred = (y_prob >= threshold).astype(int)
-    TP = np.sum((pred==1) & (y_true==1))
-    FP = np.sum((pred==1) & (y_true==0))
-    n = len(y_true)
-    return (TP/n) - (FP/n) * (threshold/(1-threshold))
+def net_benefit(y_test, y_prob, thresholds):
+    N = len(y_test)
+    out = []
+    for pt in thresholds:
+        pt = min(max(pt, 1e-6), 1-1e-6)
+        y_pred = (y_prob >= pt).astype(int)
+        TP = np.sum((y_pred==1) & (y_test==1))
+        FP = np.sum((y_pred==1) & (y_test==0))
+        out.append(TP/N - FP/N * (pt/(1-pt)))
+    return np.array(out)
 
-thresholds = np.linspace(0.01, 0.99, 50)
-nb_modelA = [net_benefit(y_test, prob_modelA, t) for t in thresholds]
-nb_modelB = [net_benefit(y_test, prob_modelB, t) for t in thresholds]
+pmin, pmax = y_prob_modelA.min(), y_prob_modelA.max()       
+pad = 0.02
+ths = np.linspace(max(0.01, pmin-pad), min(0.99, pmax+pad), 200)
 
-# Treat all และ Treat none
+nb_modelA = net_benefit(y_test, y_prob_modelA, ths)
+nb_modelB = net_benefit(y_test, y_prob_modelB, ths)
+
 prev = np.mean(y_test)
-nb_all = [prev - (1-prev)*(t/(1-t)) for t in thresholds]
-nb_none = [0]*len(thresholds)
+nb_all  = prev - (1-prev) * (ths/(1-ths))
+nb_none = np.zeros_like(ths)
 
-plt.figure(figsize=(8,6))
-plt.plot(thresholds, nb_modelA, label="model A")
-plt.plot(thresholds, nb_modelB, label="model B")
-plt.plot(thresholds, nb_all, "--", label="Treat All")
-plt.plot(thresholds, nb_none, "--", label="Treat None")
+plt.plot(ths, nb_modelA, label="model A")
+plt.plot(ths, nb_modelB, label="model B")
 
-plt.xlabel("Threshold probability")
+plt.plot(ths, nb_all,  "--", label="Treat All")
+plt.plot(ths, nb_none, "--", label="Treat None")
+plt.xlabel("Threshold Probability")
 plt.ylabel("Net Benefit")
-plt.title("Decision Curve Analysis (DCA)")
-plt.legend()
-plt.grid(True)
-plt.show()
+plt.title("DCA in operating region")
+plt.legend(); plt.grid(True, alpha=.4); plt.show()
 
 
 ---------------------------------------------------------------------------------UNSUPERVISED LEARNING----------------------------------------------------------------------------------
