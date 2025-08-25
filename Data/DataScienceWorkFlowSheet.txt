@@ -664,6 +664,13 @@ X = df[['', '']] : independent or explanatory variables
 y = df[''] : dependent or response variables
 x_train, x_test, y_train, y_test = train_test_split(X.values, y.values, test_size = 0.3, random_state = 123) : stratify = y กรณี y เป็น categorical data เพื่อ correct imbalance classification between train and test set
 
+- แก้ปัญหา Data imbalance
+from imblearn.over_sampling import SMOTE 
+smote = SMOTE(random_state=123)
+X_res, y_res = smote.fit_resample(X_train, y_train) : จากนั้นนำ X_res, y_res ไปใส่แทน X_train, y_train ใน model.fit() ต่างๆ
+print("Before:", np.bincount(y_train))
+print("After :", np.bincount(y_res))
+
 
 
     # FEATURE SCALING : reduce model bias and improve model validity 
@@ -825,11 +832,16 @@ use in classification model such as logistic regression :
 
     # EVALUATE MODEL PERFORMANCE
 
-ensembles = {'votingclassifier':vc, 
-          'baggingclassifier':bg, 
-          'randomforestclassifier':rf, 
-          'AdaBoostclassifer':abg,
-          'gradientboostclassifier':gbt}
+ensembles = {'K-nearest neighbors':knn_best,
+            'Logistic Regression':logreg_best,
+            'Support Vector Machine':svc_best,
+            'Decision Tree':dt_best,
+            'votingclassifier':vc, 
+            'baggingclassifier':bc, 
+            'randomforestclassifier':rf, 
+            'AdaBoostclassifer':ada,
+            'gradientboostclassifier':gdb,
+            'Deeplearning':mlp_best}
 results = []
 for name, model in ensembles.items() : 
     cv = cross_val_score(model, X_train, y_train, cv = kf)
@@ -1103,3 +1115,26 @@ fit model :
 
 visualize cost function change :
     plt.plot(model.loss_curve_) 
+
+
+    # ใช้ร่วมกับ GridSearchCV
+
+mlp = MLPClassifier(max_iter=2000, random_state = 123) # Set max_iter to prevent non-convergence warnings
+
+param_grid = {
+    'hidden_layer_sizes': [(50,), (100,), (100, 50)],
+    'activation': ['relu', 'tanh', 'logistic'],
+    'learning_rate_init': [0.001, 0.01]
+}
+
+grid_search = GridSearchCV(estimator=mlp, param_grid=param_grid, scoring='accuracy', cv=5, verbose=1)
+
+grid_search.fit(X_res, y_res)
+
+print(f"Best parameters: {grid_search.best_params_}")
+print(f"Best cross-validation score: {grid_search.best_score_:.4f}")
+
+mlp_best = grid_search.best_estimator_
+y_pred = mlp_best.predict(X_test)
+test_score = mlp_best.score(X_test, y_test)
+print(f"Test set score of the best model: {test_score:.4f}")
