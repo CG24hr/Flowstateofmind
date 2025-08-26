@@ -665,6 +665,7 @@ y = df[''] : dependent or response variables
 x_train, x_test, y_train, y_test = train_test_split(X.values, y.values, test_size = 0.3, random_state = 123) : stratify = y กรณี y เป็น categorical data เพื่อ correct imbalance classification between train and test set
 
 - แก้ปัญหา Data imbalance
+pip install -U scikit-learn imbalanced-learn
 from imblearn.over_sampling import SMOTE 
 smote = SMOTE(random_state=123)
 X_res, y_res = smote.fit_resample(X_train, y_train) : จากนั้นนำ X_res, y_res ไปใส่แทน X_train, y_train ใน model.fit() ต่างๆ
@@ -949,6 +950,67 @@ plt.xlabel("Threshold Probability")
 plt.ylabel("Net Benefit")
 plt.title("DCA in operating region")
 plt.legend(); plt.grid(True, alpha=.4); plt.show()
+
+
+
+    # Model Interpretability analysis :
+
+- SHAP analysis : เลือก model ที่มี test AUROC, sensitivity ที่ดี และ Decision Curve Analysis แสดง net benefit ที่มากกว่า threshold ที่จะใช้งาน
+import shap
+# สำหรับ tree-based model
+explainer = shap.TreeExplainer(rf)
+# สำหรับ non tree-based model
+explainer = shap.KernelExplainer(model.predict_proba, data)
+
+shap_values = explainer.shap_values(X_test)
+
+# สำหรับ binary classification
+shap_values_pos = shap_values[1]
+
+# Summary plot
+shap.summary_plot(shap_values_pos, X_test, feature_names=X.columns)
+shap.summary_plot(shap_values_pos, X_test, feature_names=X.columns, plot_type="bar")
+
+# If X_test is a NumPy array, convert it
+if isinstance(X_test, np.ndarray):
+    # Provide the correct feature names used in training
+    feature_names = X.columns if isinstance(X, pd.DataFrame) else [f'feature_{i}' for i in range(X_test.shape[1])]
+    X_test = pd.DataFrame(X_test, columns=feature_names)
+
+# Assuming binary classification: shap_values[1] corresponds to "positive class"
+shap_vals = shap_values[1]  # shape: (n_samples, n_features)
+expected_value = explainer.expected_value[1]  # base value (average model output)
+
+# Convert SHAP values to DataFrame
+shap_df = pd.DataFrame(shap_vals, columns=X_test.columns)
+
+# Add base value (expected_value) to each row
+shap_df['base_value'] = expected_value
+
+# Compute predicted probability as base_value + sum(SHAP values)
+shap_df['predicted_logit'] = shap_df.drop(columns='base_value').sum(axis=1) + shap_df['base_value']
+
+# Convert logit to probability (if using logit scale)
+import numpy as np
+shap_df['predicted_prob'] = 1 / (1 + np.exp(-shap_df['predicted_logit']))
+
+pd.set_option('display.max_columns', None)
+
+# Select only actual feature columns
+feature_cols = [c for c in shap_df.columns if c not in ['base_value', 'predicted_logit', 'predicted_prob']]
+
+# Compute mean absolute and mean SHAP values
+mean_abs_shap = shap_df[feature_cols].abs().mean()
+mean_shap = shap_df[feature_cols].mean()
+
+# Create summary table
+summary_table = pd.DataFrame({
+    'feature': mean_abs_shap.index,
+    'mean_abs_shap': mean_abs_shap.values,
+    'mean_shap': mean_shap.values
+}).sort_values(by='mean_abs_shap', ascending=False)
+
+summary_table
 
 
 ---------------------------------------------------------------------------------UNSUPERVISED LEARNING----------------------------------------------------------------------------------
