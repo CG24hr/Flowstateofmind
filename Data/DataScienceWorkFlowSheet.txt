@@ -662,16 +662,26 @@ text engineering :
     # SPLIT DATA : reduce overfitting, evaluate model performance on unseen dataset, use with only supervised learning model
 X = df[['', '']] : independent or explanatory variables
 y = df[''] : dependent or response variables
-x_train, x_test, y_train, y_test = train_test_split(X.values, y.values, test_size = 0.3, random_state = 123) : stratify = y กรณี y เป็น categorical data เพื่อ correct imbalance classification between train and test set
+x_train, x_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 123) : stratify = y กรณี y เป็น categorical data เพื่อ correct imbalance classification between train and test set
 
 - แก้ปัญหา Data imbalance
-pip install -U scikit-learn imbalanced-learn
-from imblearn.over_sampling import SMOTE 
-smote = SMOTE(random_state=123)
-X_res, y_res = smote.fit_resample(X_train, y_train) : จากนั้นนำ X_res, y_res ไปใส่แทน X_train, y_train ใน model.fit() ต่างๆ
-print("Before:", np.bincount(y_train))
-print("After :", np.bincount(y_res))
 
+train_df = pd.concat([X_train.reset_index(drop=True), y_train.reset_index(drop=True)], axis=1)
+
+minority = train_df[train_df['further_ED_visit'] == 1]  # replace 1 with your minority class label
+majority = train_df[train_df['further_ED_visit'] == 0]
+
+minority_upsampled = minority.sample(len(majority), replace=True, random_state=42)
+
+df_balanced = pd.concat([majority, minority_upsampled])
+
+X_train_res = df_balanced.drop('further_ED_visit', axis=1)
+y_train_res = df_balanced['further_ED_visit']
+
+print("Original training set class distribution:")
+print(y_train.value_counts())
+print("\nBalanced training set class distribution:")
+print(y_train_res.value_counts())
 
 
     # FEATURE SCALING : reduce model bias and improve model validity 
