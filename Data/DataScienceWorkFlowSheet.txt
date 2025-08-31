@@ -21,6 +21,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, PowerTransformer
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 # SUPERVISED LEARNING TOOLS
+from sklearn.neighbors import NearestNeighbors
 from sklearn.model_selection import train_test_split, KFold, cross_val_score, GridSearchCV
 from sklearn.linear_model import LinearRegression, LogisticRegression, Lasso, Ridge
 from sklearn.neighbors import KNeighborsClassifier
@@ -664,8 +665,8 @@ X = df[['', '']] : independent or explanatory variables
 y = df[''] : dependent or response variables
 x_train, x_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 123) : stratify = y กรณี y เป็น categorical data เพื่อ correct imbalance classification between train and test set
 
-- แก้ปัญหา Data imbalance
-
+    # แก้ปัญหา Data imbalance
+- manual
 train_df = pd.concat([X_train.reset_index(drop=True), y_train.reset_index(drop=True)], axis=1)
 
 minority = train_df[train_df['further_ED_visit'] == 1]  # replace 1 with your minority class label
@@ -682,6 +683,86 @@ print("Original training set class distribution:")
 print(y_train.value_counts())
 print("\nBalanced training set class distribution:")
 print(y_train_res.value_counts())
+
+- SMOTE 
+def smote(X, y, minority_class=1, N=100, k=5, balance=False, random_state=42):
+    """
+    Custom SMOTE implementation with balance option.
+
+    Parameters
+    ----------
+    X : array-like, shape (n_samples, n_features)
+        Feature matrix.
+    y : array-like, shape (n_samples,)
+        Labels.
+    minority_class : int or str
+        Label of the minority class.
+    N : int, default=100
+        Oversampling percentage (only used if balance=False).
+    k : int, default=5
+        Number of nearest neighbors.
+    balance : bool, default=False
+        If True, automatically oversample minority class to match majority.
+    random_state : int
+        Random seed.
+    """
+    np.random.seed(random_state)
+
+    # Convert to numpy arrays (drop index info)
+    X = np.asarray(X, dtype=float)
+    y = np.asarray(y)
+
+    # Extract minority samples
+    X_min = X[y == minority_class]
+    n_minority = len(X_min)
+    n_majority = len(y) - n_minority
+
+    if n_minority < 2:
+        raise ValueError("Not enough minority samples to apply SMOTE.")
+
+    # Decide number of synthetic samples
+    if balance:
+        n_synthetic = n_majority - n_minority
+    else:
+        n_synthetic = int(n_minority * (N / 100))
+
+    if n_synthetic <= 0:
+        return X, y  # already balanced or majority smaller
+
+    # Fit nearest neighbors
+    k = min(k, n_minority - 1)
+    neigh = NearestNeighbors(n_neighbors=k+1).fit(X_min)
+    neighbors = neigh.kneighbors(X_min, return_distance=False)
+
+    synthetic_samples = []
+    for _ in range(n_synthetic):
+        idx = np.random.randint(0, n_minority)
+        x_i = X_min[idx]
+
+        nn_index = np.random.choice(neighbors[idx][1:])  # pick neighbor
+        x_nn = X_min[nn_index]
+
+        gap = np.random.rand()
+        synthetic = x_i + gap * (x_nn - x_i)
+        synthetic_samples.append(synthetic)
+
+    # Combine datasets
+    X_syn = np.array(synthetic_samples)
+    y_syn = np.full(len(X_syn), minority_class)
+
+    X_res = np.vstack([X, X_syn])
+    y_res = np.hstack([y, y_syn])
+
+    # Shuffle
+    idx = np.random.permutation(len(y_res))
+    return X_res[idx], y_res[idx]
+
+X_train_res, y_train_res = smote(X_train, y_train, minority_class=1, N=200, k=5)
+
+print("Original training set class distribution:")
+print(y_train.value_counts())
+print("\nResampled training set class distribution:")
+print(pd.Series(y_train_res).value_counts())
 
 
     # FEATURE SCALING : reduce model bias and improve model validity 
@@ -966,61 +1047,37 @@ plt.legend(); plt.grid(True, alpha=.4); plt.show()
     # Model Interpretability analysis :
 
 - SHAP analysis : เลือก model ที่มี test AUROC, sensitivity ที่ดี และ Decision Curve Analysis แสดง net benefit ที่มากกว่า threshold ที่จะใช้งาน
-import shap
-# สำหรับ tree-based model
-explainer = shap.TreeExplainer(rf)
-# สำหรับ non tree-based model
-explainer = shap.KernelExplainer(model.predict_proba, data)
+# Manual (ไม่ต้อง import shap)
+# แปลง X_train/X_test เป็น DataFrame (คุณทำแล้ว)
+X_train = pd.DataFrame(X_train, columns=X.columns)
+X_test = pd.DataFrame(X_test, columns=X.columns)
+feature_names = X_train.columns.tolist()
 
-shap_values = explainer.shap_values(X_test)
+# Baseline predicted probability
+y_pred_proba = mlp_best.predict_proba(X_test)[:, 1]
 
-# สำหรับ binary classification
-shap_values_pos = shap_values[1]
+feature_effects = {}
 
-# Summary plot
-shap.summary_plot(shap_values_pos, X_test, feature_names=X.columns)
-shap.summary_plot(shap_values_pos, X_test, feature_names=X.columns, plot_type="bar")
+for col in X_test.columns:
+    X_temp = X_test.copy()
+    
+    # แทน feature ด้วย median (simulate 'feature off')
+    median_val = X_train[col].median()
+    X_temp[col] = median_val
+    
+    # predict probability ใหม่
+    y_pred_temp = mlp_best.predict_proba(X_temp)[:,1]
+    
+    # delta mean probability
+    delta = y_pred_temp.mean() - y_pred_proba.mean()
+    feature_effects[col] = delta
 
-# If X_test is a NumPy array, convert it
-if isinstance(X_test, np.ndarray):
-    # Provide the correct feature names used in training
-    feature_names = X.columns if isinstance(X, pd.DataFrame) else [f'feature_{i}' for i in range(X_test.shape[1])]
-    X_test = pd.DataFrame(X_test, columns=feature_names)
+# สร้าง DataFrame
+effect_df = pd.DataFrame.from_dict(feature_effects, orient='index', columns=['effect_on_prob'])
+effect_df['direction'] = effect_df['effect_on_prob'].apply(lambda x: 'contribute' if x>0 else 'protective')
+effect_df = effect_df.sort_values(by='effect_on_prob', key=abs, ascending=False)
 
-# Assuming binary classification: shap_values[1] corresponds to "positive class"
-shap_vals = shap_values[1]  # shape: (n_samples, n_features)
-expected_value = explainer.expected_value[1]  # base value (average model output)
-
-# Convert SHAP values to DataFrame
-shap_df = pd.DataFrame(shap_vals, columns=X_test.columns)
-
-# Add base value (expected_value) to each row
-shap_df['base_value'] = expected_value
-
-# Compute predicted probability as base_value + sum(SHAP values)
-shap_df['predicted_logit'] = shap_df.drop(columns='base_value').sum(axis=1) + shap_df['base_value']
-
-# Convert logit to probability (if using logit scale)
-import numpy as np
-shap_df['predicted_prob'] = 1 / (1 + np.exp(-shap_df['predicted_logit']))
-
-pd.set_option('display.max_columns', None)
-
-# Select only actual feature columns
-feature_cols = [c for c in shap_df.columns if c not in ['base_value', 'predicted_logit', 'predicted_prob']]
-
-# Compute mean absolute and mean SHAP values
-mean_abs_shap = shap_df[feature_cols].abs().mean()
-mean_shap = shap_df[feature_cols].mean()
-
-# Create summary table
-summary_table = pd.DataFrame({
-    'feature': mean_abs_shap.index,
-    'mean_abs_shap': mean_abs_shap.values,
-    'mean_shap': mean_shap.values
-}).sort_values(by='mean_abs_shap', ascending=False)
-
-summary_table
+print(effect_df)
 
 
 ---------------------------------------------------------------------------------UNSUPERVISED LEARNING----------------------------------------------------------------------------------
