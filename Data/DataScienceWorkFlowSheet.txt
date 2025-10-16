@@ -538,6 +538,10 @@ cox proportional hazard model :
     print('The exp(coef) is Hazard Ratio.')
     cox.plot()
     cox.summary
+    # Calculate HR per 1 S.D. กรณีตัวแปรต้นเป็น continuous variable
+    data["x_std"] = (data["x"] - data["x"].mean()) / data["x"].std()
+    cph.fit(data, duration_col="time", event_col="event", formula="x_std")
+
 
 
 
